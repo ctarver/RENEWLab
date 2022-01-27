@@ -4,10 +4,10 @@ p.n_ants = 8;
 
 p.mod.name = 'OFDM';
 p.mod.required_domain = 'freq';
-p.mod.required_fs = 7.92e6;
+p.mod.required_fs = 7.68e6;
 p.mod.n_users = p.n_users;
 p.mod.n_scs = 200;
-p.mod.fft_size = 528;
+p.mod.fft_size = 512;
 p.mod.n_symbols = 14;
 
 p.bs_array.name = 'Simulation'; % or 'ARGOS';
