@@ -22,14 +22,14 @@ classdef ACLR_Dataflow < handle
             obj.n_users = p.n_users;
             obj.n_ants = p.n_ants;
             
-            obj.bs = Module.create('bs', p);
-            obj.ues = Module.create('ue', p);
+            obj.bs = Module.create('bs_array', p);
+            obj.ues = Module.create('ue_array', p);
             
-            if strcmp(obj.bs, 'Simulation')
+            if strcmp(p.bs_array.name, 'sim_channel')
                 obj.simulated_channel = Module.create('sim_channel', p);
             end
             
-            obj.real_channel = Module.create('channel', p);
+            obj.real_channel = Module.create('real_channel', p);
             obj.precoder = Module.create('precoder', p);
         end
         

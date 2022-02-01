@@ -1,4 +1,4 @@
-classdef RealChannel < Channel
+classdef RealChannel < Module
     %REALCHANNEL. This channel subclass is meant to be used with the FPGA
     %platform for learning and loading channels.
     %
@@ -8,9 +8,8 @@ classdef RealChannel < Channel
     
     properties
         H           % Channel matrix. Freq domain. (user_rx, tx_ant, subcarrier)
-        required_domain % str. Should be 'freq'
-        required_fs % int. Expected sampling rate. Used only for error checking.
-        n_tx        % int. number of TX antennas in the array.
+        n_ants      % int. number of TX antennas in the array.
+        n_users     % int. Number of UE RXs
         theta       % int. array of angles to users. In learn mode, there should only be 1 angle.
         distance    % int. array of distances to the users. In learn mode, there should only be 1 angle.
         n_scs       % int. Number of subcarriers to learn over.
@@ -20,26 +19,40 @@ classdef RealChannel < Channel
         pilots      % complex matrix. saved when pilots are generated. compared against demod data to learn channel.
         p_sig       % msig. All the pilots wrapped in a msig. % TODO. could remove above.
         one_shot    % bool. Flag to make pilots all in 1 msig.
-        i_ue        % int. Index of UE in the RX.
     end
     
     methods
-        function obj = RealChannel(p)
-            obj.required_domain = p.channel.required_domain;
-            obj.required_fs = p.channel.required_fs;
-            obj.n_tx = p.n_antennas;
-            obj.theta = p.users.theta;
-            obj.distance = p.users.distance;
-            obj.n_scs = p.mod.n_scs;
-            obj.fft_size = p.mod.fft_size;
-            obj.sc_spacing = p.mod.sc_spacing;
-            obj.f_center = p.f_center;
-            obj.one_shot = p.channel.one_shot;
-            obj.i_ue = p.channel.i_ue;
+        function obj = RealChannel(varargin)
+            % Parse the inputs.
+            vars = inputParser;
+            valid_constellations = {'BPSK', 'QPSK', '16QAM','64QAM'};
+            validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
+            validBool = @(x) islogical(x);
             
-            if strcmp(p.channel.mode, 'load')
-                obj.load();
+            
+            addParameter(vars, 'name', 'RealChannel', @(x) any(validatestring(x,{'RealChannel'})));
+            addParameter(vars, 'required_domain', 'freq', @(x) any(validatestring(x,{'freq'})));
+            addParameter(vars, 'required_fs', 122.88e6, validScalarPosNum);
+            addParameter(vars, 'index', 1, validScalarPosNum);
+            addParameter(vars, 'n_ants', 8, validScalarPosNum);
+            addParameter(vars, 'n_users', 1, validScalarPosNum);
+            addParameter(vars, 'sc_spacing', 15e3, validScalarPosNum);
+            addParameter(vars, 'f_center', 3.5e9, validScalarPosNum);
+            addParameter(vars, 'fft_size', 4096, validScalarPosNum);
+            addParameter(vars, 'n_scs', 1024, validScalarPosNum);
+            addParameter(vars, 'theta', 90, validScalarPosNum);
+            addParameter(vars, 'distance', 200, validScalarPosNum);
+            parse(vars, varargin{:});
+            
+            % Save inputs to obj
+            fields = fieldnames(vars.Results);
+            for i = 1:numel(fields)
+                obj.(fields{i}) = vars.Results.(fields{i});
             end
+            
+            %if strcmp(p.channel.mode, 'load')
+            %    obj.load();
+            %end
         end
         
         function learn(obj, pilots, ue_msig_in, i)
