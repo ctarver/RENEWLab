@@ -40,8 +40,9 @@ classdef Module < handle
             module_dictionary('UEs') = @(p, i) User(p, i);
             
             % Channels
-            module_dictionary('Quadriga') = @(p, i) Quadriga(p, i);
-            module_dictionary('LOS') = @(p, i) LOS(p, i);
+            module_dictionary('RealChannel') = @(varargin) RealChannel(varargin{:});
+            module_dictionary('Quadriga') = @(varargin) Quadriga(varargin{:});
+            module_dictionary('LOS') = @(varargin) LOS(varargin{:});
             
             % Precoders
             module_dictionary('ZF') = @(p, i) ZF(p, i);
@@ -51,8 +52,11 @@ classdef Module < handle
             module_dictionary('DPD') = @(p, i) DPD(p, i);
             
             % Arrays
+            module_dictionary('Sim_Array') = @(varargin) Sim_Array(varargin{:});
+            module_dictionary('Iris') = @(varargin) IRIS(varargin{:});
             module_dictionary('PA') = @(p, i) PA(p, i);
             module_dictionary('GMP') = @(p, i) GMP(p, i);
+            
         end
         
         function objs = create(category_name, p, n_objs)
