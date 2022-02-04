@@ -2,6 +2,9 @@
 p.n_users = 1;
 p.n_ants = 8;
 
+p.users.distance = 10;
+p.users.theta = 100;
+
 p.mod.name = 'OFDM';
 p.mod.required_domain = 'freq';
 p.mod.required_fs = 7.68e6;
