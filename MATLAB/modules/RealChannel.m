@@ -25,10 +25,7 @@ classdef RealChannel < Module
         function obj = RealChannel(varargin)
             % Parse the inputs.
             vars = inputParser;
-            valid_constellations = {'BPSK', 'QPSK', '16QAM','64QAM'};
             validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-            validBool = @(x) islogical(x);
-            
             
             addParameter(vars, 'name', 'RealChannel', @(x) any(validatestring(x,{'RealChannel'})));
             addParameter(vars, 'required_domain', 'freq', @(x) any(validatestring(x,{'freq'})));
@@ -222,7 +219,7 @@ classdef RealChannel < Module
             ofdm_settings.clip_index = 0;
             fs =  obj.sc_spacing * obj.fft_size;
             assert(fs==obj.required_fs,'Calculated fs doesnt match specified fs');
-            S = mSignal(obj.pilots, obj.n_tx, obj.required_domain, obj.required_fs, ofdm_settings);
+            S = Signal(obj.pilots, obj.n_tx, obj.required_domain, obj.required_fs, ofdm_settings);
             obj.p_sig = S;
         end
         
