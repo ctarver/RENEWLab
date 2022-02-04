@@ -234,13 +234,6 @@ classdef OFDM < Module
         end
         
         function generate_rrc(obj)
-            window_length_dictionary = containers.Map(obj.n_active_scs, ...
-                obj.window_lengths);
-            try
-                obj.window_length = window_length_dictionary(obj.n_scs);
-            catch
-                obj.window_length = 8;
-            end
             N = obj.window_length;
             obj.rrc_taps = zeros(N, 1);
             for i = 1:N
@@ -250,7 +243,7 @@ classdef OFDM < Module
         
         function out = add_cp(obj, in)
             [n_streams, n_symbols, fft_size] = size(in);
-            total_cp = obj.cp_length + obj.window_length;
+            total_cp = obj.cp_length; %I used to extend the CP for the window. + obj.window_length;
             out = zeros(n_streams, n_symbols, fft_size + total_cp);
             
             out(:,:,1:total_cp) = in(:, :, end-total_cp+1:end);
@@ -259,22 +252,29 @@ classdef OFDM < Module
         
         function out = remove_cp(obj, in)
             out = in(:,:,obj.cp_length+1:end);
-        end        
+        end
         
         function out = add_windows(obj, in)
             N = length(obj.rrc_taps);
-            out = in;
+            
+            % Add a cyclic suffix. This will ramp down during the ramp up
+            % of the CP of the next symbol, leaving the main part of the
+            % symbol alone.
+            [n_streams, n_symbols, n_cp_samples] = size(in);
+            in_with_suffix = zeros(n_streams, n_symbols, n_cp_samples + obj.window_length);
+            in_with_suffix(:,:,1:end-obj.window_length) = in;
+            in_with_suffix(:,:,end-obj.window_length+1:end) = in(:,:,obj.cp_length+1:obj.cp_length+obj.window_length);
+            out = in_with_suffix;
             
             % Make a matrix version of the rrx tabs so we can do element
             % wise mult. Couldn't find a nice repmat to do what I wanted.
-            [n_streams, n_symbols, fft_size] = size(in);
             rrc_matrix = ones(n_streams, n_symbols, N);
             for i = 1:N
                 rrc_matrix(:,:,i) = obj.rrc_taps(i);
             end
             
-            out(:,:, 1:N) = in(:,:, 1:N) .* rrc_matrix;  % Ramp up this symbol
-            out(:,:, end-N+1:end) = in(:,:,end-N+1:end) .* flip(rrc_matrix, 3); % Ramp down this symbol.
+            out(:,:, 1:N) = in_with_suffix(:,:, 1:N) .* rrc_matrix;  % Ramp up the CP of this symbol
+            out(:,:, end-N+1:end) = in_with_suffix(:,:,end-N+1:end) .* flip(rrc_matrix, 3); % Ramp down suffix symbol.
         end
         
         
@@ -299,11 +299,11 @@ classdef OFDM < Module
             
             % Combine each symbol into a vector accounting for windowing.
             % first symbol is special
-            pre_out(:, 1:samp_per_sym) = in_grid(:, 1, N+1:end);
+            %pre_out(:, 1:samp_per_sym) = in_grid(:, 1, 1:samp_per_sym);
             
             % Other symbols overlap with previous
-            for i = 2:K
-                current_index = (i - 1) * samp_per_sym + 1 - N;
+            for i = 1:K-1
+                current_index = (i - 1) * samp_per_sym + 1;
                 
                 % If n_streams = 1, I end up with an issue where one of
                 % these is a column and one is a row...
@@ -317,6 +317,19 @@ classdef OFDM < Module
                 pre_out(:, current_index:current_index+samp_per_sym+N-1) = this_symbol;
             end
             
+            % Last symbol is special. No tail window
+            current_index = (K - 1) * samp_per_sym + 1;
+            if n_streams == 1
+                data1 = squeeze(pre_out(:, current_index:current_index+samp_per_sym-1));
+                data2 = squeeze(in_grid(:, i,1:samp_per_sym));
+                this_symbol = data1(:) + data2(:);
+            else
+                this_symbol = squeeze(pre_out(:, current_index:current_index+samp_per_sym-1)) + squeeze(in_grid(:, i,1:samp_per_sym));
+            end
+            pre_out(:, current_index:current_index+samp_per_sym-1) = this_symbol;
+            
+            
+            
             if obj.make_cyclic
                 out = pre_out(n_streams, samp_per_sym+1:end-samp_per_sym);
             else
@@ -327,7 +340,7 @@ classdef OFDM < Module
         function td_grid = make_td_grid(obj, td_vectors)
             [n_streams, total_n_samples] = size(td_vectors);
             samples_per_symbol = total_n_samples / obj.n_symbols;
-             
+            
             td_grid = zeros(n_streams, obj.n_symbols, samples_per_symbol);
             current_sample = 1;
             for i=1:obj.n_symbols

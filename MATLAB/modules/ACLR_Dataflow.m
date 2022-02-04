@@ -11,9 +11,19 @@ classdef ACLR_Dataflow < handle
         simulated_channel  % This is used when bs and ues are in sim mode.
         real_channel       % Will hold the RealChannel measured OTA.
         precoder
+        
         v0_downlink_data
         v1_pre_out
-        v2_ue_rx
+        v2_bs_out
+        v3_ue_rx
+        
+        v10_pilot_signals
+        v12_bs_out
+        v13_ue_rx
+        
+        v21_pre_out
+        v22_bs_out
+        v23_ue_rx
     end
     
     methods
@@ -25,14 +35,7 @@ classdef ACLR_Dataflow < handle
             
             obj.bs = Module.create('bs_array', p);
             obj.ues = Module.create('ue_array', p);
-            
-            if strcmp(p.bs_array.name, 'sim_channel')
-                obj.simulated_channel = Module.create('sim_channel', p);
-                obj.sim_mode = 1;
-            else
-                obj.sim_mode = 0;
-            end
-            
+            obj.simulated_channel = Module.create('sim_channel', p);
             obj.real_channel = Module.create('real_channel', p);
             obj.precoder = Module.create('precoder', p);
         end
@@ -40,54 +43,32 @@ classdef ACLR_Dataflow < handle
         function run(obj)
             %% Step 1. No beamforming. See what RX power is.
             obj.v0_downlink_data = Signal.make_ofdm(obj.n_users, obj.p.mod);
-            obj.v0_downlink_data.match_this('time')
-            obj.v0_downlink_data.match_this('freq');
-            % Copy this signal onto all streams.
-            obj.v0_downlink_data.plot_iq;
-            obj.v0_downlink_data.plot_psd;
-            
-            obj.bs.tx(obj.v0_downlink_data);
-            if obj.sim_mode
-                % Need to run through a channel and then sideload data into
-                % UE obj.
-                
-            end
-            obj.v1 = obj.ue.rx()
+            bypass_precoder = PrecoderBypass('name', 'PrecoderBypass', ...
+                'required_fs', obj.v0_downlink_data.fs, ...
+                'required_domain', 'bypass', ...
+                'n_ant', obj.n_ants);
+            obj.v1_pre_out = bypass_precoder.use(obj.v0_downlink_data);
+            obj.v2_bs_out = obj.bs.tx(obj.v1_pre_out);
+            ue_rx = obj.simulated_channel.use(obj.v2_bs_out); % Only used if array are sim.
+            obj.v3_ue_rx = obj.ues.rx(ue_rx);  % Arg is ignored if real array.
             
             %% Step 2. Learn Channel.
             % Make pilots.
             % Run Downlink from each TX to the UEs
-            obj.bs.tx(obj.v0_downlink_data);
-            if obj.sim_mode
-                % Need to run through a channel and then sideload data into
-                % UE obj.
-                
-            end
-            obj.v1 = obj.ue.rx()
-            % How steady are these channels.
+            obj.v10_pilot_signals = obj.real_channel.create_pilots();
+            obj.v12_bs_out = obj.bs.tx(obj.v10_pilot_signals);
+            ue_rx = obj.simulated_channel.use(obj.v12_bs_out); % Only used if array are sim.
+            obj.v13_ue_rx = obj.ues.rx(ue_rx);
+            obj.real_channel.learn(obj.v10_pilot_signals, obj.v13_ue_rx);
             
-            % Make a placeholder signal.
-            ue_rx_sigs = Signal.make_ofdm(obj.n_ants, obj.p.mod);
-            ue_rx_sigs.match_this('domain', 'time');
-            ue_rx_sigs.data = zeros(size(ue_rx_sigs.data));
-            
-            for i_bs = 1:obj.n_ants
-                tx_sig = obj.v0_downlink_data.zero_all_but(i_bs);
-                obj.bs.tx(tx_sig)  % Need to check on the trigger.
-                ue_rx_sigs.data(:) = obj.ues.rx();
-            end
-            
-            %% We should probably check the ACLR of each PA using the above.
-            
-            
-            %% Xcorr and Calculate Downlink Channel
-            obj.real_channel.learn(obj.v0_downlink_data, ue_rx_sigs);
+            % We should probably check the ACLR of each PA using the above.
             
             %% Step 3. Main Downlink
             obj.precoder.update(obj.real_channel.H);
-            obj.v1_pre_out = obj.precoder.use(obj.v0_downlink_data);
-            obj.bs.tx(obj.v1_pre_out);
-            obj.v2_ue_rx = obj.ue.rx();
+            obj.v21_pre_out = obj.precoder.use(obj.v0_downlink_data);
+            obj.v22_bs_out = obj.bs.tx(obj.v21_pre_out);
+            ue_rx = obj.simulated_channel.use(obj.v22_bs_out); % Only used if array are sim.
+            obj.v23_ue_rx = obj.ues.rx(ue_rx);
             
         end
         

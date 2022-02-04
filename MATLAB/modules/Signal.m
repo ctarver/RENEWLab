@@ -53,6 +53,28 @@ classdef Signal < handle
             end
         end
         
+        function ber = calculate_bit_errors(obj, ref_bits)
+            if nargin == 1
+                ref_bits = obj.modulator.user_bits;
+            end
+            
+            rx_bits = obj.modulator.demodulate(obj.data);
+            n_errors = sum(ref_bits~=rx_bits);
+            total_bits = length(rx_bits);
+            ber = n_errors/total_bits;
+        end
+        
+        function evm = calculate_evm(obj, ref_symbols)
+            if nargin == 1
+                ref_symbols = obj.modulator.original_fd;
+            end
+            
+            error = ref_symbols - obj.data;
+            mag = abs(ref_symbols).^2;
+            evm = sum(error(:)) / sum(mag(:));
+            
+        end
+        
         function freq_shift(obj,offset)
             % TODO.
         end
@@ -63,6 +85,29 @@ classdef Signal < handle
         
         function normalize_to_this_rms(obj, this_rms)
             % TODO.
+        end
+        
+        function measure_channels(obj, channels)
+            n_channels = numel(channels);
+            all_rows = zeros(obj.n_streams, n_channels); 
+            for i = 1:obj.n_streams
+                all_channels = zeros(1, n_channels);
+                for i_channel = -2:2
+                    % Get the absolute powers for each channel in the stream
+                    lower_limit = i_channel*carrier_bw - carrier_bw/2;
+                    upper_limit = i_channel*carrier_bw + carrier_bw/2;
+                    % add 3 to index this array from 1.
+                    all_channels(i_channel+3) = obj.signal_array(i).measure_power([lower_limit, upper_limit]);
+                end
+                this_main = all_channels(3);
+                
+                % Convert to relative dBc
+                this_row = all_channels - this_main;
+                s
+                % Put absolute main back in
+                this_row(3) = this_main;
+                all_rows(i, :) = this_row;
+            end
         end
         
         function gain(obj, gain_amount)
@@ -101,6 +146,17 @@ classdef Signal < handle
             else
                 warning('Unexpected case where there shouldnt be up/down sampling');
             end
+        end
+        
+        function plot_spectrogram(obj)
+            if strcmp(obj.domain, 'freq')
+                s_copy = obj.copy;
+                s_copy.match_this('time');
+                s_copy.plot_spectrogram;
+                return;
+            end
+            figure()
+            spectrogram(obj.data(1,:), 100,80,100,obj.fs, 'centered','yaxis')
         end
         
         function plot_psd(obj, fig_id)
@@ -157,7 +213,7 @@ classdef Signal < handle
             if strcmp(obj.domain, 'time')
                 s_copy = obj.copy;
                 s_copy.match_this('freq');
-                s_copy.plot_iq;
+                s_copy.plot_constellation;
                 return;
             end
             if nargin == 1
@@ -166,8 +222,10 @@ classdef Signal < handle
             figure(fig_id)
             
             for i_channel = 1:obj.n_streams
-                plot(obj.data(:, i_channel), 'o');
+                this_fd_data = obj.data(i_channel,:,:);
+                plot(this_fd_data(:), 'o');
             end
+            hold on; grid on;
         end
         
         function plot_iq(obj, fig_id)

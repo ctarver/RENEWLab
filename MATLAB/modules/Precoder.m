@@ -20,11 +20,8 @@ classdef Precoder < Module
             S = S_in.copy();
             S.match_this(obj.required_domain)
             
-            %% Extract the data to pass into the precoder
-            S_matrix = S.extract_data;
-            
             %% Use the selected precoding subclass
-            precoded_out = obj.subclass_use(S_matrix);
+            precoded_out = obj.subclass_use(S.data);
             
             %% Pack the returned data in a mSignal object
             if strcmp(obj.required_domain, 'bypass')
@@ -33,8 +30,8 @@ classdef Precoder < Module
                 new_domain = obj.required_domain;
             end
             
-            precoded_data = mSignal(precoded_out, obj.n_ant, new_domain, ...
-                S.fs, S.mod_settings, 'Pre Data');
+            precoded_data = Signal(precoded_out, obj.n_ant, new_domain, ...
+                S.fs, S.modulator, 'Pre Data');
         end
     end
     

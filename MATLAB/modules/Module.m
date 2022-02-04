@@ -57,7 +57,8 @@ classdef Module < handle
             module_dictionary('LOS') = @(varargin) LOS(varargin{:});
             
             % Precoders
-            module_dictionary('ZF') = @(p, i) ZF(p, i);
+            module_dictionary('PrecoderBypass') = @(varargin) PrecoderBypass(varargin{:});
+            module_dictionary('ZF') = @(varargin) ZF(varargin{:});
             module_dictionary('MRT') = @(varargin) MRT(varargin{:});
             
             % DPDs
