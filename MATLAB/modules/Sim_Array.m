@@ -1,4 +1,4 @@
-classdef Sim_Array < Module
+classdef Sim_Array < Array
     %SIM_ARRAY Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -10,10 +10,7 @@ classdef Sim_Array < Module
         function obj = Sim_Array(varargin)
             % Parse the inputs.
             vars = inputParser;
-            valid_constellations = {'BPSK', 'QPSK', '16QAM','64QAM'};
-            validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-            validBool = @(x) islogical(x);
-            
+            validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0); 
             
             addParameter(vars, 'name', 'Sim_Array', @(x) any(validatestring(x,{'Sim_Array'})));
             addParameter(vars, 'required_domain', 'time', @(x) any(validatestring(x,{'time'})));
@@ -21,21 +18,21 @@ classdef Sim_Array < Module
             addParameter(vars, 'index', 1, validScalarPosNum);
             addParameter(vars, 'n_antennas', 1, validScalarPosNum);
             parse(vars, varargin{:});
-            
-            % Save inputs to obj
-            fields = fieldnames(vars.Results);
-            for i = 1:numel(fields)
-                obj.(fields{i}) = vars.Results.(fields{i});
-            end
+            obj.save_inputs_to_obj(vars);
         end
         
-        function tx(obj)
+        function subclass_tx(obj, in)
             
         end
         
-        function rx(obj)
+        function out = subclass_rx(obj)
             
         end
+        
+        function subclass_measure_noise(obj)
+            
+        end
+        
         function report(obj)
             
         end
