@@ -99,6 +99,10 @@ classdef RealChannel < Module
                 obj.H(i_ue, :, :) = this_h.channel;
             end
         end
+        
+        function report(obj)
+            
+        end
     end
     
     methods (Access = protected)

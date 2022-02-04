@@ -17,15 +17,15 @@
 clear
 close all;
 
-[version, executable, isloaded] = pyversion;
-if ~isloaded
-    pyversion /usr/bin/python
-    py.print() %weird bug where py isn't loaded in an external script
-end
-py.importlib.import_module('iris_py')
+%[version, executable, isloaded] = pyversion;
+%if ~isloaded
+%    pyversion /usr/bin/python
+%    py.print() %weird bug where py isn't loaded in an external script
+%end
+%py.importlib.import_module('iris_py')
 
 % Params:
-WRITE_PNG_FILES    = 0;                                      % Enable writing plots to PNG
+%WRITE_PNG_FILES    = 0;                                      % Enable writing plots to PNG
 
 %Iris params:
 USE_HUB                 = 1;

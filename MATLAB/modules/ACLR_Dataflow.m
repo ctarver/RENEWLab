@@ -7,6 +7,7 @@ classdef ACLR_Dataflow < handle
         n_ants
         bs
         ues
+        sim_mode
         simulated_channel  % This is used when bs and ues are in sim mode.
         real_channel       % Will hold the RealChannel measured OTA.
         precoder
@@ -27,6 +28,9 @@ classdef ACLR_Dataflow < handle
             
             if strcmp(p.bs_array.name, 'sim_channel')
                 obj.simulated_channel = Module.create('sim_channel', p);
+                obj.sim_mode = 1;
+            else
+                obj.sim_mode = 0;
             end
             
             obj.real_channel = Module.create('real_channel', p);
@@ -34,11 +38,32 @@ classdef ACLR_Dataflow < handle
         end
         
         function run(obj)
-            %% Make Data
+            %% Step 1. No beamforming. See what RX power is.
             obj.v0_downlink_data = Signal.make_ofdm(obj.n_users, obj.p.mod);
+            obj.v0_downlink_data.match_this('time')
+            obj.v0_downlink_data.match_this('freq');
+            % Copy this signal onto all streams.
+            obj.v0_downlink_data.plot_iq;
+            obj.v0_downlink_data.plot_psd;
             
+            obj.bs.tx(obj.v0_downlink_data);
+            if obj.sim_mode
+                % Need to run through a channel and then sideload data into
+                % UE obj.
+                
+            end
+            obj.v1 = obj.ue.rx()
             
-            %% Run Downlink from each TX to the UEs
+            %% Step 2. Learn Channel.
+            % Make pilots.
+            % Run Downlink from each TX to the UEs
+            obj.bs.tx(obj.v0_downlink_data);
+            if obj.sim_mode
+                % Need to run through a channel and then sideload data into
+                % UE obj.
+                
+            end
+            obj.v1 = obj.ue.rx()
             % How steady are these channels.
             
             % Make a placeholder signal.
@@ -58,7 +83,7 @@ classdef ACLR_Dataflow < handle
             %% Xcorr and Calculate Downlink Channel
             obj.real_channel.learn(obj.v0_downlink_data, ue_rx_sigs);
             
-            %% Main Downlink
+            %% Step 3. Main Downlink
             obj.precoder.update(obj.real_channel.H);
             obj.v1_pre_out = obj.precoder.use(obj.v0_downlink_data);
             obj.bs.tx(obj.v1_pre_out);

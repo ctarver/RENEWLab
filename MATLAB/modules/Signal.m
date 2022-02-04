@@ -5,9 +5,9 @@ classdef Signal < handle
     %   my_signal = Signal(data, n_streams, domain, f_s)
     %
     %   If data is 'time' domain, then the dimensions should be
-    %      (sample, stream)
+    %      (stream, sample)
     %   If data is 'freq' domain, then the dimensions should be
-    %      (bin, symbol, user)
+    %      (stream, bin, symbol)
     
     properties
         data
@@ -84,19 +84,12 @@ classdef Signal < handle
                 obj.data = obj.modulator.fd_to_td(obj.data);
                 obj.domain = 'time';
             elseif strcmp(obj.domain, 'time')  && strcmp(desired_domain, 'freq')
-                obj.data = obj.modulator.td_to_fd();
+                obj.data = obj.modulator.td_to_fd(obj.data);
                 obj.domain = 'freq';
             end
         end
         
         function change_fs(obj, desired_fs)
-            try
-                obj.ofdm.clip_index = floor(obj.ofdm.clip_index * desired_fs / obj.fs);
-            catch
-                warning('Clip index not set. Setting to 0');
-                obj.ofdm.clip_index = 0;
-            end
-            
             if strcmp(desired_fs, 'bypass')
                 return
             elseif obj.fs < desired_fs
@@ -110,42 +103,54 @@ classdef Signal < handle
             end
         end
         
-        function upsample(obj, desired_fs)
-            for i=1:obj.n_streams
-                obj.signal_array(i).upsample(desired_fs);
-            end
-            obj.fs = desired_fs;
-        end
-        
-        function downsample(obj, desired_fs)
-            for i=1:obj.n_streams
-                obj.signal_array(i).downsample(desired_fs);
-            end
-            obj.fs = desired_fs;
-        end
-        
         function plot_psd(obj, fig_id)
+            % PLOT_PSD() Plot all signals to input fig_id (98 if default).
+            % Signals will be plotted in grid subplots.
+            
+            % Only works if Signal is time domain. If not, make copy,
+            % convert, and plot that.
+            if strcmp(obj.domain, 'freq')
+                s_copy = obj.copy;
+                s_copy.match_this('time');
+                s_copy.plot_psd;
+                return;
+            end
+            
             if nargin == 1
-                fig_id = 99;
+                fig_id = 98;
             end
             
             figure(fig_id)
             
-            [X, Signal_PSD, density] = obj.get_psd();
-            figure(fig_id);
-            grid on;
-            hold on;
-            title('PSD');
-            try
-                plot(X, Signal_PSD, obj.figure_style, 'LineWidth', 0.5, 'DisplayName', obj.name);
-            catch
-                plot(X, Signal_PSD, 'LineWidth', 0.5);
+            tile_set = [];
+            for i_channel = 1:obj.n_streams
+                [x, y, d] = obj.get_psd(i_channel);
+                tile(i_channel) = subplot(floor(sqrt(obj.n_streams)),ceil(obj.n_streams/floor(sqrt(obj.n_streams))),i_channel);
+                try
+                    plot(x,y,obj.figure_style, 'DisplayName', obj.name);
+                catch
+                    try
+                        plot(x,y);
+                    catch
+                        warning('Cant Plot PSD.');
+                    end
+                end
+                hold on; grid on;
+                title(sprintf('Rx Stream %d', i_channel));
+                xlabel('Frequency (MHz)');
+                ylabel(sprintf('PSD (dBm/%d kHz)', d/1e3));
+                
+                % Only show 1 legend for all plots
+                if i_channel == obj.n_streams
+                    legend show;
+                    legend('Position',[0.91, 0.5, 0.1, 0.1])
+                end
+                
+                tile_set = [tile_set tile(i_channel)];
             end
             
-            xlabel('Frequency (MHz)');
-            ylabel(sprintf('PSD (dBm/%d kHz)', density/1e3));
+            linkaxes(tile_set,'xy')
             ylim([-120 0]);
-            legend show;
         end
         
         function plot_constellation(obj, fig_id)
@@ -159,7 +164,7 @@ classdef Signal < handle
                 fig_id = 333;
             end
             figure(fig_id)
-     
+            
             for i_channel = 1:obj.n_streams
                 plot(obj.data(:, i_channel), 'o');
             end
@@ -178,12 +183,12 @@ classdef Signal < handle
             figure(fig_id)
             tile_set = [];
             
-            N = length(obj.signal_array(1).data);
-            period = 1 / obj.signal_array(1).current_fs;
+            N = length(obj.data);
+            period = 1 / obj.fs;
             t = period * (1:N);
             
             for i_channel = 1:obj.n_streams
-                y = obj.signal_array(i_channel).data;
+                y = obj.data(i_channel,: );
                 tile(i_channel) = subplot(2,ceil(obj.n_streams/2),i_channel);
                 plot(t,real(y)); hold on
                 plot(t, imag(y));grid on;
@@ -197,15 +202,38 @@ classdef Signal < handle
         end
         
         function S_copy = copy(obj)
-            % Copy data array
-            stream_data = obj.extract_data();
-            
             % Construct new mSignal based on obj
-            S_copy = Signal(stream_data, obj.n_streams, obj.domain, ...
-                obj.fs, obj.ofdm, obj.name);
+            S_copy = Signal(obj.data, obj.n_streams, obj.domain, ...
+                obj.fs, obj.modulator, obj.name);
             
             % Copy all other optional/non constructor input properties
             S_copy.figure_style = obj.figure_style;
+        end
+    end
+    
+    methods (Access=private)
+        function [X, Signal_PSD, density] = get_psd(obj, index)
+            Nfft = 1024;
+            Window = kaiser(1000, 9);
+            
+            X = (-1:2/Nfft:1-2/Nfft)*((obj.fs) / (2e6));
+            Signal_PSD = 10 * log10(fftshift(pwelch(obj.data(index,:), Window))/sqrt(Nfft));
+            
+            density = obj.fs / Nfft; % In kHz
+        end
+        
+        function upsample(obj, desired_fs)
+            for i=1:obj.n_streams
+                obj.signal_array(i).upsample(desired_fs);
+            end
+            obj.fs = desired_fs;
+        end
+        
+        function downsample(obj, desired_fs)
+            for i=1:obj.n_streams
+                obj.signal_array(i).downsample(desired_fs);
+            end
+            obj.fs = desired_fs;
         end
     end
     
@@ -215,8 +243,5 @@ classdef Signal < handle
             fd_data = my_ofdm.modulate();
             obj = Signal(fd_data, n_users, 'freq', my_ofdm.sampling_rate, my_ofdm);
         end
-    end
-    
-    methods (Access = protected)
     end
 end

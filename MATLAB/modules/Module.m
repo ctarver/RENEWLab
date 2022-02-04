@@ -29,6 +29,18 @@ classdef Module < handle
         end
     end
     
+    methods (Access=protected)
+        function save_inputs_to_obj(obj, vars)
+            % Will take the parsed vars and save to object in your
+            % subclass.
+            % Each field needs to be a valid property of the class.
+            fields = fieldnames(vars.Results);
+            for i = 1:numel(fields)
+                obj.(fields{i}) = vars.Results.(fields{i});
+            end
+        end
+    end
+    
     methods (Static)
         function [module_dictionary] = populateModuleDictionary()
             % populate dictionary of leaf modules
@@ -46,7 +58,7 @@ classdef Module < handle
             
             % Precoders
             module_dictionary('ZF') = @(p, i) ZF(p, i);
-            module_dictionary('MRT') = @(p, i) MRT(p, i);
+            module_dictionary('MRT') = @(varargin) MRT(varargin{:});
             
             % DPDs
             module_dictionary('DPD') = @(p, i) DPD(p, i);
