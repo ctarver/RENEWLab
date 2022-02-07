@@ -15,6 +15,10 @@ classdef IRIS < Array
         hub_id
         node
         is_bs
+        sched
+        n_samp
+        n_frame
+        n_zero
     end
     
     methods
@@ -39,6 +43,10 @@ classdef IRIS < Array
             addParameter(vars, 'rx_freq', 3.6e9, validScalarPosNum);
             addParameter(vars, 'use_hub', true, validBool);
             addParameter(vars, 'is_bs', true, validBool);
+            addParameter(vars, 'sched', 'BGPG');
+            addParameter(vars, 'n_samp', 4096, validScalarPosNum);
+            addParameter(vars, 'n_frame', 1, validScalarPosNum);
+            addParameter(vars, 'n_zero', 128, validScalarPosNum);
             parse(vars, varargin{:});
             obj.save_inputs_to_obj(vars);
             
@@ -46,6 +54,9 @@ classdef IRIS < Array
             
             % Error checking.
             assert(obj.n_antennas==numel(obj.serials), 'Number of antennas doesnt match number of serial numbers');
+            
+            obj.setup_board;
+            
         end
         
         function subclass_tx(obj, data)
@@ -97,10 +108,10 @@ classdef IRIS < Array
                 'txgain', obj.tx_gain, ...
                 'rxgain', obj.rx_gain, ...
                 'sample_rate', obj.required_fs, ...
-                'n_samp', N_SAMP, ...          % number of samples per frame time.
-                'n_frame', N_FRM, ...
-                'tdd_sched', bs_sched, ...     % number of zero-paddes samples
-                'n_zpad_samp', N_ZPAD_PRE ...
+                'n_samp', obj.n_samp, ...          % number of samples per frame time.
+                'n_frame', obj.n_frame, ...
+                'tdd_sched', obj.sched, ...     % number of zero-paddes samples
+                'n_zpad_samp', obj.n_zero ...
                 );
             
             obj.node = iris_py(sdr_params, obj.hub_id);
