@@ -34,6 +34,7 @@ p.bs_array.tx_gain = 75;
 p.bs_array.rx_gain = 60;
 p.bs_array.chain_ids = 2:3;
 p.bs_array.node_ids = 1:8;
+p.bs_array.sched = "BGPG";
 
 p.ue_array.name = 'Sim_Array';
 p.ue_array.n_antennas = p.n_users;
@@ -44,7 +45,7 @@ p.ue_array.name = 'IRIS';
 p.ue_array.n_antennas = 1;
 p.ue_array.required_fs = p.mod.required_fs;
 p.ue_array.required_domain = 'time';
-p.ue_array.WIRED_UE = 0;
+p.ue_array.wired_ue = false;
 p.ue_array.use_hub = false;
 p.ue_array.tx_freq = 3.6e9;  
 p.ue_array.rx_freq = 3.6e9;
@@ -52,6 +53,7 @@ p.ue_array.tx_gain = 75;
 p.ue_array.rx_gain = 60;
 p.ue_array.chain_ids = 7;
 p.ue_array.node_ids = 1;
+p.ue_array.sched = "GGRG";
 
 % Only used for simulation arrays.
 p.sim_channel.name = 'Quadriga';
