@@ -55,7 +55,7 @@ classdef ACLR_Dataflow < handle
             %% Step 2. Learn Channel.
             % Make pilots.
             % Run Downlink from each TX to the UEs
-            obj.v10_pilot_signals = obj.real_channel.create_pilots();
+            obj.v10_pilot_signals = obj.real_channel.create_pilots(obj.p.mod);
             obj.v12_bs_out = obj.bs.tx(obj.v10_pilot_signals);
             ue_rx = obj.simulated_channel.use(obj.v12_bs_out); % Only used if array are sim.
             obj.v13_ue_rx = obj.ues.rx(ue_rx);
@@ -78,8 +78,9 @@ classdef ACLR_Dataflow < handle
             
         end
         
-        function plot()
-            
+        function plot(obj)
+            obj.v3_ue_rx.plot_psd();
+            obj.v23_ue_rx.plot_psd();
         end
     end
 end

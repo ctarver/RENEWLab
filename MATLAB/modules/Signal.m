@@ -205,7 +205,7 @@ classdef Signal < handle
                 tile_set = [tile_set tile(i_channel)];
             end
             
-            linkaxes(tile_set,'xy')
+            %linkaxes(tile_set,'xy')
             ylim([-120 0]);
         end
         
