@@ -12,17 +12,13 @@ classdef Channel < Module
         function obj = Channel()
         end
         
-        function [enb_rx, ue_rx] = use(obj, downlink_mSignal_in, uplink_mSignal_in)
+        function ue_rx = use(obj, downlink_Signal_in)
             % Make copies of data
-            downlink_mSignal = downlink_mSignal_in.copy();
-            uplink_mSignal = uplink_mSignal_in.copy();
-            
+            downlink_mSignal = downlink_Signal_in.copy();
             downlink_mSignal.match_this(obj.required_domain, obj.required_fs);
-            uplink_mSignal.match_this(obj.required_domain, obj.required_fs);
             
-            % Unpack the data.
-            
-            [enb_rx, ue_rx] = obj.subclass_use(X, Y);
+            ue_rx = Signal(obj.subclass_use(downlink_mSignal.data), obj.n_users,...
+                obj.required_domain, obj.required_fs, downlink_Signal_in.modulator, 'Channel Out');
         end
     end
 end

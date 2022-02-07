@@ -12,6 +12,10 @@ p.mod.n_users = p.n_users;
 p.mod.n_scs = 200;
 p.mod.fft_size = 512;
 p.mod.n_symbols = 14;
+p.mod.make_cyclic = true;
+p.mod.use_windowing = true;
+p.mod.window_length = 64;
+p.mod.use_random = false;
 
 p.bs_array.name = 'Sim_Array'; % or 'ARGOS';
 p.bs_array.n_antennas = p.n_ants;
@@ -24,9 +28,11 @@ p.ue_array.required_fs = p.mod.required_fs;
 p.ue_array.required_domain = 'time';
 
 % Only used for simulation arrays.
-p.sim_channel.name = 'LOS';
+p.sim_channel.name = 'Quadriga';
 p.sim_channel.required_fs = p.mod.required_fs;
 p.sim_channel.required_domain = 'freq';
+p.sim_channel.n_ant = p.n_ants;
+p.sim_channel.n_users = p.n_users;
 
 % Real channel that we will learn. 
 p.real_channel.name = 'RealChannel';

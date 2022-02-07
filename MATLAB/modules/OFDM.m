@@ -331,7 +331,7 @@ classdef OFDM < Module
             
             
             if obj.make_cyclic
-                out = pre_out(n_streams, samp_per_sym+1:end-samp_per_sym);
+                out = pre_out(:, samp_per_sym+1:end-samp_per_sym);
             else
                 out = pre_out;
             end
