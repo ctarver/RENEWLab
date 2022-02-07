@@ -66,7 +66,7 @@ classdef Module < handle
             
             % Arrays
             module_dictionary('Sim_Array') = @(varargin) Sim_Array(varargin{:});
-            module_dictionary('Iris') = @(varargin) IRIS(varargin{:});
+            module_dictionary('IRIS') = @(varargin) IRIS(varargin{:});
             module_dictionary('PA') = @(p, i) PA(p, i);
             module_dictionary('GMP') = @(p, i) GMP(p, i);
             
