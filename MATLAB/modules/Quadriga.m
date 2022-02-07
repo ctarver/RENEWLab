@@ -31,9 +31,9 @@ classdef Quadriga < Channel
             addParameter(vars, 'f_c', 3.5e9, validScalarPosNum);
             addParameter(vars, 'fft_size', 4096, validScalarPosNum);
             addParameter(vars, 'sc_spacing', 15e3, validScalarPosNum);
-            addPartameter(vars, 'scenario', 'LOSonly', validStr)
+            addParameter(vars, 'scenario', 'LOSonly', validStr)
             addParameter(vars, 'theta_array', 70);
-            addPartameter(vars, 'dist_array', 200);
+            addParameter(vars, 'dist_array', 200);
             
             parse(vars, varargin{:});
             obj.save_inputs_to_obj(vars);
@@ -49,26 +49,26 @@ classdef Quadriga < Channel
             fprintf('Quadriga channel.\n')
         end
         
-        function [Y_up, Y_down] = subclass_use(obj, X1, X2)
+        function [Y_down] = subclass_use(obj, X1)
             % USE() Use channel
             
             % Go through the channel for each subcarrier
             
             [n_antennas, n_symbols, larger_fft] = size(X1);
-            [n_users, ~, ~] = size(X2);
+            %[n_users, ~, ~] = size(X2);
             
             assert(n_antennas==obj.n_ant, 'Downlink data isnt correct dimensions for channel');
-            assert(n_users==obj.n_ue, 'Uplink data isnt correct dimensions for channel');
+            %assert(n_users==obj.n_users, 'Uplink data isnt correct dimensions for channel');
             
-            Y_down = zeros(n_users, n_symbols, larger_fft);
-            Y_up = zeros(n_antennas, n_symbols, larger_fft);
+            Y_down = zeros(obj.n_users, n_symbols, larger_fft);
+            %Y_up = zeros(n_antennas, n_symbols, larger_fft);
             for i_subcarrier = 1:larger_fft
                 HX1 = obj.H(:,:,i_subcarrier)*X1(:,:,i_subcarrier);
-                self_interference = obj.C(:,:,i_subcarrier) * X1(:,:,i_subcarrier);
+                %self_interference = obj.C(:,:,i_subcarrier) * X1(:,:,i_subcarrier);
                 
-                HX2 = transpose(obj.H(:,:,i_subcarrier))*X2(:,:,i_subcarrier);
+                %HX2 = transpose(obj.H(:,:,i_subcarrier))*X2(:,:,i_subcarrier);
                 Y_down(:,:,i_subcarrier) = HX1; %+ sqrt(N0)*obj.N(:,:,i_subcarrier);
-                Y_up(:,:,i_subcarrier) = HX2 + self_interference; %+ sqrt(N0)*obj.N(:,:,i_subcarrier);
+                %Y_up(:,:,i_subcarrier) = HX2 + self_interference; %+ sqrt(N0)*obj.N(:,:,i_subcarrier);
             end
         end
         function Y_down = subclass_use_down(obj, X1)
@@ -138,7 +138,7 @@ classdef Quadriga < Channel
             % Inputs:
             % p             Struct
             channel = obj.layout.get_channels;
-            f_up = obj.fft_size *obj.sc_spacing;
+            f_up = obj.fft_size * obj.sc_spacing;
             
             % Get the channel for each user?
             % This is in RX Antenna, TX Antenna, Subcarrier, Time index;

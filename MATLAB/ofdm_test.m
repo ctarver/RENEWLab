@@ -3,14 +3,14 @@ p.n_users = 1;
 
 p.mod.name = 'OFDM';
 p.mod.required_domain = 'freq';
-p.mod.required_fs = 2*7.68e6;
+p.mod.required_fs = 7.68e6;
 p.mod.n_users = p.n_users;
-p.mod.n_scs = 200;
-p.mod.fft_size = 2*512;
+p.mod.n_scs = 100;
+p.mod.fft_size = 512;
 p.mod.n_symbols = 14;
-p.mod.make_cyclic = false;
+p.mod.make_cyclic = true;
 p.mod.use_windowing = true;
-p.mod.window_length = 32;
+p.mod.window_length = 64;
 p.mod.use_random = false;
 
 v0_downlink_data = Signal.make_ofdm(p.n_users, p.mod);
@@ -18,7 +18,7 @@ v0_downlink_data = Signal.make_ofdm(p.n_users, p.mod);
 v0_downlink_data.plot_iq;
 v0_downlink_data.plot_psd;
 v0_downlink_data.plot_constellation;
-v0_downlink_data.measure_channels([-6 -2],[-2 2],[2 6]);
+%v0_downlink_data.measure_channels([-6 -2],[-2 2],[2 6]);
 
 v0_downlink_data.match_this('time');
 v0_downlink_data.plot_constellation;

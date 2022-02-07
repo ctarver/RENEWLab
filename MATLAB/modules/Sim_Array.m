@@ -21,12 +21,12 @@ classdef Sim_Array < Array
             obj.save_inputs_to_obj(vars);
         end
         
-        function subclass_tx(obj, in)
-            
+        function out = subclass_tx(obj, in)
+            out = in;
         end
         
-        function out = subclass_rx(obj)
-            
+        function out = subclass_rx(obj, in)
+            out = in;
         end
         
         function subclass_measure_noise(obj)
