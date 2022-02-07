@@ -1,6 +1,6 @@
 %% Settings.
 p.n_users = 1;
-p.n_ants = 8;
+p.n_ants = 64;
 
 p.users.distance = 10;
 p.users.theta = 100;
@@ -25,7 +25,7 @@ p.bs_array.required_domain = 'time';
 p.ue_array.name = 'Sim_Array';
 p.ue_array.n_antennas = p.n_users;
 p.ue_array.required_fs = p.mod.required_fs;
-p.ue_array.required_domain = 'time';
+p.ue_array.required_domain = 'freq';
 
 % Only used for simulation arrays.
 p.sim_channel.name = 'Quadriga';
@@ -33,11 +33,14 @@ p.sim_channel.required_fs = p.mod.required_fs;
 p.sim_channel.required_domain = 'freq';
 p.sim_channel.n_ant = p.n_ants;
 p.sim_channel.n_users = p.n_users;
+p.sim_channel.fft_size =  p.mod.fft_size;
 
 % Real channel that we will learn. 
 p.real_channel.name = 'RealChannel';
 p.real_channel.required_fs = p.mod.required_fs;
 p.real_channel.required_domain = 'freq';
+p.real_channel.n_scs = p.mod.fft_size;
+p.real_channel.n_ants = p.n_ants;
 
 % Precoder.
 p.precoder.name = 'MRT';
@@ -47,5 +50,5 @@ p.precoder.required_domain = 'freq';
 %% Test
 dataflow = ACLR_Dataflow(p);
 dataflow.run()
-dataflow.report();
+
 dataflow.plot();

@@ -13,7 +13,7 @@ classdef Sim_Array < Array
             validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0); 
             
             addParameter(vars, 'name', 'Sim_Array', @(x) any(validatestring(x,{'Sim_Array'})));
-            addParameter(vars, 'required_domain', 'time', @(x) any(validatestring(x,{'time'})));
+            addParameter(vars, 'required_domain', 'time', @(x) any(validatestring(x,{'time', 'freq'})));
             addParameter(vars, 'required_fs', 122.88e6, validScalarPosNum);
             addParameter(vars, 'index', 1, validScalarPosNum);
             addParameter(vars, 'n_antennas', 1, validScalarPosNum);

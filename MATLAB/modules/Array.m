@@ -65,7 +65,7 @@ classdef Array < Module
             
             
             out = obj.subclass_rx(in.data);
-            S_out = Signal(out, obj.n_rx_paths, obj.required_domain, ...
+            S_out = Signal(out, obj.n_antennas, obj.required_domain, ...
                     obj.required_fs, in.modulator);
         end
         

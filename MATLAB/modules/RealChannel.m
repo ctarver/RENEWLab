@@ -26,7 +26,7 @@ classdef RealChannel < Module
             % Parse the inputs.
             vars = inputParser;
             validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-            
+            validBool = @(x) islogical(x);
             addParameter(vars, 'name', 'RealChannel', @(x) any(validatestring(x,{'RealChannel'})));
             addParameter(vars, 'required_domain', 'freq', @(x) any(validatestring(x,{'freq'})));
             addParameter(vars, 'required_fs', 122.88e6, validScalarPosNum);
@@ -39,6 +39,7 @@ classdef RealChannel < Module
             addParameter(vars, 'n_scs', 1024, validScalarPosNum);
             addParameter(vars, 'theta', 90, validScalarPosNum);
             addParameter(vars, 'distance', 200, validScalarPosNum);
+            addParameter(vars, 'one_shot', true, validBool);
             parse(vars, varargin{:});
             
             % Save inputs to obj
@@ -56,7 +57,7 @@ classdef RealChannel < Module
             %learn. Use the array class passed in to learn the channel.
             % Create a signal.
             ue_msig = ue_msig_in.copy();
-            ue_msig.match_this('time', obj.required_fs);
+            %ue_msig.match_this('time', obj.required_fs);
             
             if obj.one_shot
                 obj.learn_one_shot(pilots, ue_msig);
@@ -68,19 +69,20 @@ classdef RealChannel < Module
             obj.save;
         end
         
-        function S = create_pilots(obj, i_tx)
+        function S = create_pilots(obj, i_tx_or_ofdm_set)
             if obj.one_shot
-                S = obj.make_one_shot_pilot();
+                S = obj.make_one_shot_pilot(i_tx_or_ofdm_set);
             else
-                S = obj.make_single_pilot_symbol(i_tx);
+                S = obj.make_single_pilot_symbol(i_tx_or_ofdm_set);
             end
         end
         
         function save(obj)
             channel = obj.H;
-            str = obj.format_file_name(1);
-            path_to_lib = obj.path_of_library;
-            name = strcat(path_to_lib, str);
+            %str = obj.format_file_name(1);
+            %path_to_lib = obj.path_of_library;
+            %name = strcat(path_to_lib, str);
+            name = 'matlab_channel';
             save(name, 'channel') % TODO, get it in the correct path.
         end
         
@@ -164,16 +166,18 @@ classdef RealChannel < Module
         end
         
         function learn_one_shot(obj, pilots, ue_msig)
-            % Learn the channel in the case that we sed one-shot pilots.
+            % Learn the channel in the case that we send one-shot pilots.
             % Maybe need to do an align and extract to the data from user 1.
             % extract just the pilots for tx 1.
-            s1 = mSignal(pilots.signal_array(1).data, 1, pilots.domain, pilots.fs, pilots.mod_settings);
-            s1.match_this('time', obj.required_fs);
-            ue_msig.align_to_group(s1);
+            
+            %% Align
+            %s1 = Signal(pilots.data(1,:,:), 1, pilots.domain, pilots.fs, pilots.modulator);
+            %s1.match_this('time', obj.required_fs);
+            %ue_msig.align_to_group(s1);
             
             %% Demod
             ue_msig.match_this('freq');
-            Y = ue_msig.extract_data;
+            Y = ue_msig.data;
             
             % Rearange into grid.
             Y = squeeze(Y(1,:,:));
@@ -181,45 +185,36 @@ classdef RealChannel < Module
             
             [n_subcarriers, n_symbols] = size(Y);
             
-            obj.H = zeros(1, obj.n_tx, obj.n_scs); % 1st index is user.
+            obj.H = zeros(1, obj.n_ants, obj.n_scs); % 1st index is user.
             % For each symbols compare to perfect pilot that we
             % transmitted.
+            this_x = squeeze(pilots.data(1,1,:));
+            data_scs = abs(this_x)>0;
             for i = 1:n_symbols
                 % For each subcarrier, compute
-                this_x = squeeze(obj.pilots(i,i,:));
-                this_h = Y(:, i)./this_x;
-                obj.H(1,i,:) = this_h;
-            end
+                this_x = squeeze(pilots.data(i,i,:));
+                this_h = Y(data_scs, i)./this_x(data_scs);
+                obj.H(1,i,data_scs) = this_h;
+            end    
         end
         
-        function S = make_one_shot_pilot(obj)
+        function S = make_one_shot_pilot(obj, ofdm_settings)
             %Will create a pilot sequence to fit within the number of
             %samples specified.
             
             % We will create 1 symbol per TX. They will not overlap in
             % time.
-            n_symbols = obj.n_tx;
-            obj.pilots = zeros(obj.n_tx, n_symbols, obj.n_scs);
-            symbol_alphabet = [-1-1i;-1+1i;1+1i;1-1i];
-            rng(0);
-            for i_tx = 1:obj.n_tx
+            ofdm_settings.n_users = obj.n_ants;
+            ofdm_settings.n_symbols = obj.n_ants;
+            S = Signal.make_ofdm(obj.n_ants, ofdm_settings);
+            % Delete data so ortho in time.
+            for i_tx = 1:obj.n_ants
                 % The pilots can be anything as long as we keep track of
                 % them. We will just do a QPSK on each subcarrier
-                obj.pilots(i_tx, i_tx, : ) = symbol_alphabet(randi(4,obj.n_scs,1));
+                complement = setxor(i_tx, 1:obj.n_ants);
+                S.data(i_tx, complement, :)  = zeros(size(S.data(i_tx, complement, :)));
             end
             
-            ofdm_settings.name = 'ofdm';
-            ofdm_settings.n_symbols = n_symbols;
-            ofdm_settings.n_scs = obj.n_scs;
-            ofdm_settings.sc_spacing = obj.sc_spacing;
-            ofdm_settings.fft_size = obj.fft_size;
-            ofdm_settings.cp_length = 0; % TODO. Do we need this for right now?
-            ofdm_settings.window_length = 0;
-            ofdm_settings.rrc_taps = 1;
-            ofdm_settings.clip_index = 0;
-            fs =  obj.sc_spacing * obj.fft_size;
-            assert(fs==obj.required_fs,'Calculated fs doesnt match specified fs');
-            S = Signal(obj.pilots, obj.n_tx, obj.required_domain, obj.required_fs, ofdm_settings);
             obj.p_sig = S;
         end
         
