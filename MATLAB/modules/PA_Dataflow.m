@@ -60,12 +60,21 @@ classdef PA_Dataflow < handle
             %% Step 2. Learn PAs.
             % Make pilots.
             % Run Downlink from each TX to the UEs
+            ofdm_settings = obj.p.mod;
+            ofdm_settings.n_users = obj.n_ants;
+
             for i_ant = 1:obj.n_ants
-                obj.v10_pilot_signals = obj.real_channel.create_pilots(obj.p.mod, i_ant);
-                obj.v12_bs_out = obj.bs.tx(obj.v10_pilot_signals);
-                ue_rx = obj.simulated_channel.use(obj.v12_bs_out); % Only used if array are sim.
-                obj.v13_ue_rx = obj.ues.rx(ue_rx);
-                obj.pas(i_ant).learn(obj.v10_pilot_signals, obj.v13_ue_rx);
+                % Make data for all antennas then zero out the ones we
+                % aren't using.
+                this_pa_in_sig = Signal.make_ofdm(obj.n_ants, obj.p.mod);
+                complement = setxor(i_tx, 1:obj.n_ants);
+                this_pa_in_sig.data(complement, :, :)  = ...
+                    zeros(size(this_pa_in_sig.data(complement, :, :)));
+                
+                bs_out = obj.bs.tx(this_pa_in_sig);
+                ue_rx = obj.simulated_channel.use(bs_out); % Only used if array are sim.
+                this_pa_out = obj.ues.rx(ue_rx); % Hopefully wired...
+                obj.pas(i_ant).learn(this_pa_in_sig, this_pa_out);
             end
             % We should probably check the ACLR of each PA using the above.
             
