@@ -14,7 +14,7 @@ classdef GMP < Module
     methods
         function obj = GMP(varargin)
             vars = inputParser;
-            validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
+            validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x >= 0);
             validBool = @(x) islogical(x);
             addParameter(vars, 'name', 'GMP', @(x) any(validatestring(x,{'GMP'})));
             addParameter(vars, 'required_domain', 'time', @(x) any(validatestring(x,{'time'})));
@@ -32,6 +32,10 @@ classdef GMP < Module
             
             % Create some default coeffs.
             obj.run_setup;
+        end
+        
+        function report(obj)
+            
         end
         
         function y = use(obj, x)

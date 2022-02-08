@@ -9,6 +9,8 @@ p.users.distance = 10;
 p.users.theta = 100;
 
 p.pa.name = 'GMP';
+p.pa.required_domain = 'time';
+p.pa.required_fs = 7.68e6;
 p.pa.P = 7;
 p.pa.M = 4;
 p.pa.L = 0;
