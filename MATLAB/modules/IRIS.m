@@ -74,7 +74,7 @@ classdef IRIS < Array
             % appending zeros.
             n_data_samples = length(data(1,:));
             total_n_zero = obj.n_samp - n_data_samples;
-            
+            fprtinf('Will add %d zeros to slot\n', total_n_zero);
             data_start = total_n_zero/2;
             input_slot = zeros(obj.n_antennas, obj.n_samp);
             input_slot(:, data_start:data_start+n_data_samples) = data;
@@ -87,20 +87,35 @@ classdef IRIS < Array
             % Start
             obj.node.sdrtrigger();
             
-            % Tell UEs we are done. 
-            obj.done_with_tx();
+            % Tell UEs we are done.
+            obj.stop_rxs();
         end
         
-        function outputArg = subclass_rx(obj,inputArg)
-            [rx_vec_iris, data0_len] = node_ue.uesdrrx(N_SAMP); % read data
+        function out = subclass_rx(obj)
+            if isempty(obj.rx_vec_iris)
+                [obj.rx_vec_iris, data0_len] = node_ue.uesdrrx(obj.n_samp); % read data
+            end
+            out = obj.rx_vec_iris;
         end
         
-        function out = subclass_measure_noise(obj)
+        function subclass_measure_noise(obj)
+            obj.prepare_rxs();
             
+            input_slot = zeros(obj.n_antennas, obj.n_samp);
+            
+            % Write data
+            for i=1:obj.n_antennas
+                obj.node.sdrtx_single(input_slot(i,:), i);  % Burn data to the BS RAM
+            end
+            
+            % Start
+            obj.node.sdrtrigger();
+            
+            % Tell UEs we are done.
+            obj.stop_rxs();
         end
         
         function report(obj)
-            
             
         end
         
@@ -116,22 +131,24 @@ classdef IRIS < Array
         function done_with_tx(obj)
             % This method is meant for UE nodes after the gNB triggers.
             % It is called by the triggering node.
-            [obj.rx_vec_iris, data0_len] = node_ue.uesdrrx(N_SAMP); % read data
-            if ~WIRED_UE
+            [obj.rx_vec_iris, data0_len] = node_ue.uesdrrx(obj.n_samp); % read data
+            if ~obj.wired_ue
                 obj.sdr_unsetcorr();              % activate correlator
-            end            
+            end
         end
     end
     
     methods (Access=protected)
         
         function prepare_rxs(obj)
+            % Will tell each UE to prepare!
             for i = 1:numel(obj.subscribers)
                 obj.subscribers{i}.prepare_for_tx();
             end
         end
         
         function stop_rxs(obj)
+            % Will tell each UE to relax
             for i = 1:numel(obj.subscribers)
                 obj.subscribers{i}.done_with_tx();
             end

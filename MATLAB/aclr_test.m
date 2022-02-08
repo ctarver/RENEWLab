@@ -1,5 +1,5 @@
 %% Settings.
-clear;clc;close all;
+clear;clc;%close all;
 p.n_users = 1;
 p.n_ants = 16;
 
@@ -14,7 +14,7 @@ p.mod.required_fs = 7.68e6;
 p.mod.n_users = p.n_users;
 p.mod.n_scs = 100;
 p.mod.fft_size = 512;
-p.mod.n_symbols = 2;
+p.mod.n_symbols = 6;
 p.mod.make_cyclic = true;
 p.mod.use_windowing = true;
 p.mod.window_length = 32;

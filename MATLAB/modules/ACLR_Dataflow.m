@@ -38,6 +38,8 @@ classdef ACLR_Dataflow < handle
             obj.simulated_channel = Module.create('sim_channel', p);
             obj.real_channel = Module.create('real_channel', p);
             obj.precoder = Module.create('precoder', p);
+            
+            obj.bs.subscribe_rx(obj.ues)
         end
         
         function run(obj)

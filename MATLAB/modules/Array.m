@@ -52,6 +52,8 @@ classdef Array < Module
             % Extract the data to pass into the subclass tx function
             S_matrix = S.data;
             obj.S_last = S;
+            
+            fprintf('Transmitting %d samples\n', length(S.data));
 
             % Call subclass_tx, wrap into mSignal, and return
             S_out = Signal(obj.subclass_tx(S_matrix), S_in.n_streams, obj.required_domain, ...
