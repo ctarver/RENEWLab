@@ -19,6 +19,8 @@ classdef IRIS < Array
         n_samp
         n_frame
         n_zero
+        subscribers = {}
+        rx_vec_iris
     end
     
     methods
@@ -59,11 +61,24 @@ classdef IRIS < Array
             
         end
         
+        function subscribe_rx(obj, ue)
+            % This is meant to be to register a ue to the list of ues.
+            n_subcribers = numel(obj.subscrbers);
+            obj.subscribers{n_subcribers+1} = {ue};
+        end
+        
         function subclass_tx(obj, data)
+            obj.prepare_rxs();
+            
+            % Write data
             for i=1:obj.n_antennas
                 obj.node.sdrtx_single(data(i,:), i);  % Burn data to the BS RAM
             end
+            
+            % Start
             obj.node.sdrtrigger();
+            
+            obj.done_with_tx();
         end
         
         function outputArg = subclass_rx(obj,inputArg)
@@ -78,9 +93,40 @@ classdef IRIS < Array
             
             
         end
+        
+        function prepare_for_tx(obj)
+            % This method is meant for UE nodes before the gNB triggers.
+            % It is called by the triggering node.
+            if ~obj.wired_ue
+                obj.node.sdr_setcorr();              % activate correlator
+            end
+            obj.node.sdr_activate_rx();   % activate reading stream
+        end
+        
+        function done_with_tx(obj)
+            % This method is meant for UE nodes after the gNB triggers.
+            % It is called by the triggering node.
+            [obj.rx_vec_iris, data0_len] = node_ue.uesdrrx(N_SAMP); % read data
+            if ~WIRED_UE
+                obj.sdr_unsetcorr();              % activate correlator
+            end            
+        end
     end
     
     methods (Access=protected)
+        
+        function prepare_rxs(obj)
+            for i = 1:numel(obj.subscribers)
+                obj.subscribers{i}.prepare_for_tx();
+            end
+        end
+        
+        function stop_rxs(obj)
+            for i = 1:numel(obj.subscribers)
+                obj.subscribers{i}.done_with_tx();
+            end
+        end
+        
         function set_serial_numbers(obj)
             chains = ["", "" ,"" ,"" ,"" ,"" ,"","";...
                 "RF3E000087", "RF3E000084", "RF3E000107", "RF3E000110", "RF3E000086", "RF3E000162", "RF3E000127", "RF3E000597"; ...];  % Chain 2
