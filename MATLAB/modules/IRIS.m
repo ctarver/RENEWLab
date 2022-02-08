@@ -70,14 +70,24 @@ classdef IRIS < Array
         function subclass_tx(obj, data)
             obj.prepare_rxs();
             
+            % Make data fit the specified n_samples by  prepending and
+            % appending zeros.
+            n_data_samples = length(data(1,:));
+            total_n_zero = obj.n_samp - n_data_samples;
+            
+            data_start = total_n_zero/2;
+            input_slot = zeros(obj.n_antennas, obj.n_samp);
+            input_slot(:, data_start:data_start+n_data_samples) = data;
+            
             % Write data
             for i=1:obj.n_antennas
-                obj.node.sdrtx_single(data(i,:), i);  % Burn data to the BS RAM
+                obj.node.sdrtx_single(input_slot(i,:), i);  % Burn data to the BS RAM
             end
             
             % Start
             obj.node.sdrtrigger();
             
+            % Tell UEs we are done. 
             obj.done_with_tx();
         end
         
