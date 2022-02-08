@@ -152,6 +152,7 @@ classdef RealChannel < Module
             % time.
             ofdm_settings.n_users = obj.n_ants;
             ofdm_settings.n_symbols = 1;
+            ofdm_settings.n_scs = ofdm_settings.fft_size;
             S = Signal.make_ofdm(obj.n_ants, ofdm_settings);
             % Delete data for other antennas..
             complement = setxor(i_tx, 1:obj.n_ants);
