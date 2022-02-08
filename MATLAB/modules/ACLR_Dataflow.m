@@ -55,12 +55,13 @@ classdef ACLR_Dataflow < handle
             %% Step 2. Learn Channel.
             % Make pilots.
             % Run Downlink from each TX to the UEs
-            obj.v10_pilot_signals = obj.real_channel.create_pilots(obj.p.mod);
-            obj.v12_bs_out = obj.bs.tx(obj.v10_pilot_signals);
-            ue_rx = obj.simulated_channel.use(obj.v12_bs_out); % Only used if array are sim.
-            obj.v13_ue_rx = obj.ues.rx(ue_rx);
-            obj.real_channel.learn(obj.v10_pilot_signals, obj.v13_ue_rx);
-            
+            for i_ant = 1:obj.n_ants
+                obj.v10_pilot_signals = obj.real_channel.create_pilots(obj.p.mod, i_ant);
+                obj.v12_bs_out = obj.bs.tx(obj.v10_pilot_signals);
+                ue_rx = obj.simulated_channel.use(obj.v12_bs_out); % Only used if array are sim.
+                obj.v13_ue_rx = obj.ues.rx(ue_rx);
+                obj.real_channel.learn(obj.v10_pilot_signals, obj.v13_ue_rx, i_ant);
+            end
             % We should probably check the ACLR of each PA using the above.
             
             %% Step 3. Main Downlink

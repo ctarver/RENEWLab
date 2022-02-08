@@ -69,11 +69,11 @@ classdef RealChannel < Module
             obj.save;
         end
         
-        function S = create_pilots(obj, i_tx_or_ofdm_set)
+        function S = create_pilots(obj, ofdm_settings, i_tx)
             if obj.one_shot
-                S = obj.make_one_shot_pilot(i_tx_or_ofdm_set);
+                S = obj.make_one_shot_pilot(ofdm_settings);
             else
-                S = obj.make_single_pilot_symbol(i_tx_or_ofdm_set);
+                S = obj.make_single_pilot_symbol(ofdm_settings, i_tx);
             end
         end
         
@@ -105,63 +105,57 @@ classdef RealChannel < Module
     end
     
     methods (Access = protected)
-        function learn_this_tx_channel(obj, pilots, ue_msig_full, i)
+        function learn_this_tx_channel(obj, pilots, ue_msig, i)
             % Learn the channel in the case that we do
             % Maybe need to do an align and extract to the data from user 1.
             % extract just the pilots for tx 1.
-            ue_msig = mSignal(ue_msig_full.signal_array(obj.i_ue).data, 1, pilots.domain, pilots.fs, pilots.mod_settings);
-            ue_msig.match_this('time');
+            %ue_msig = mSignal(ue_msig_full.signal_array(obj.i_ue).data, 1, pilots.domain, pilots.fs, pilots.mod_settings);
+            %ue_msig.match_this('time');
             
-            s1 = mSignal(pilots.signal_array(i).data, 1, pilots.domain, pilots.fs, pilots.mod_settings);
-            s1.match_this('time', obj.required_fs);
-            ue_msig.align_to_group(s1);
+            %s1 = mSignal(pilots.signal_array(i).data, 1, pilots.domain, pilots.fs, pilots.mod_settings);
+            %s1.match_this('time', obj.required_fs);
+            %ue_msig.align_to_group(s1);
             
             %% Demod
             ue_msig.match_this('freq');
-            Y = ue_msig.extract_data;
+            Y = ue_msig.data;
             
             % Rearange into grid.
             Y = squeeze(Y(1,:,:));
-            Y = Y.'; % Subcarriers should be columns
+            %Y = Y.'; % Subcarriers should be columns
             
             [n_subcarriers, n_symbols] = size(Y);
             
             if isempty(obj.H)
-                obj.H = zeros(1, obj.n_tx, obj.n_scs); % 1st index is user.
+                obj.H = zeros(1, obj.n_ants, obj.n_scs); % 1st index is user.
             end
             % For each symbols compare to perfect pilot that we
             % transmitted.
             
             % For each subcarrier, compute
-            this_x = squeeze(obj.pilots(i, 1, :)); % Grab pilot for this TX
-            this_x = this_x.';
-            this_h = Y./this_x;
-            obj.H(1, i, :) = this_h;
+            this_x = squeeze(pilots.data(i, 1, :)); % Grab pilot for this TX
+            data_scs = abs(this_x)>0;
+            %this_x = this_x.';
+            this_h = Y(data_scs)./this_x(data_scs);
+            obj.H(1, i, data_scs) = this_h;
         end
         
-        function S = make_single_pilot_symbol(obj, i)
+        function S = make_single_pilot_symbol(obj, ofdm_settings, i_tx)
             %Will create one pilot symbol. This is intended to be used to
             %do one-at-a-time learning across all the TXs.
             
             % We will create 1 symbol.
-            n_symbols = 1;
-            obj.pilots = zeros(obj.n_tx, n_symbols, obj.n_scs);
-            symbol_alphabet = [-1-1i;-1+1i;1+1i;1-1i];
-            rng(0);
-            obj.pilots(i, 1, : ) = symbol_alphabet(randi(4,obj.n_scs,1));
+            %Will create a pilot sequence to fit within the number of
+            %samples specified.
             
-            ofdm_settings.name = 'ofdm';
-            ofdm_settings.n_symbols = n_symbols;
-            ofdm_settings.n_scs = obj.n_scs;
-            ofdm_settings.sc_spacing = obj.sc_spacing;
-            ofdm_settings.fft_size = obj.fft_size;
-            ofdm_settings.cp_length = 0; % TODO. Do we need this for right now?
-            ofdm_settings.window_length = 0;
-            ofdm_settings.rrc_taps = 1;
-            ofdm_settings.clip_index = 0;
-            fs =  obj.sc_spacing * obj.fft_size;
-            assert(fs==obj.required_fs, 'Calculated fs doesnt match specified fs');
-            S = mSignal(obj.pilots, obj.n_tx, obj.required_domain, obj.required_fs, ofdm_settings);
+            % We will create 1 symbol per TX. They will not overlap in
+            % time.
+            ofdm_settings.n_users = obj.n_ants;
+            ofdm_settings.n_symbols = 1;
+            S = Signal.make_ofdm(obj.n_ants, ofdm_settings);
+            % Delete data for other antennas..
+            complement = setxor(i_tx, 1:obj.n_ants);
+            S.data(complement, :, :)  = zeros(size(S.data(complement, :, :)));
             obj.p_sig = S;
         end
         
@@ -195,7 +189,7 @@ classdef RealChannel < Module
                 this_x = squeeze(pilots.data(i,i,:));
                 this_h = Y(data_scs, i)./this_x(data_scs);
                 obj.H(1,i,data_scs) = this_h;
-            end    
+            end
         end
         
         function S = make_one_shot_pilot(obj, ofdm_settings)
