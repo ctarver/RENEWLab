@@ -29,6 +29,10 @@ classdef Sim_Array < Array
             out = in;
         end
         
+        function subscribe_rx(obj, in)
+            % nop
+        end
+        
         function subclass_measure_noise(obj)
             
         end
