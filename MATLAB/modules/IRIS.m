@@ -21,6 +21,7 @@ classdef IRIS < Array
         n_zero
         subscribers = {}
         rx_vec_iris
+        use_tdd
     end
     
     methods
@@ -49,6 +50,7 @@ classdef IRIS < Array
             addParameter(vars, 'n_samp', 4096, validScalarPosNum);
             addParameter(vars, 'n_frame', 50, validScalarPosNum);
             addParameter(vars, 'n_zero', 404, validScalarPosNum);
+            addParameter(vars, 'use_tdd', false, validBool);
             parse(vars, varargin{:});
             obj.save_inputs_to_obj(vars);
             
@@ -137,6 +139,10 @@ classdef IRIS < Array
                 obj.node.sdr_unsetcorr();              % activate correlator
             end
         end
+        
+        function delete(obj)
+           obj.node.sdr_close(); 
+        end
     end
     
     methods (Access=protected)
@@ -175,6 +181,11 @@ classdef IRIS < Array
         end
         
         function setup_board(obj)
+            if obj.use_tdd
+                obj.sched = [];
+            end
+            
+            
             sdr_params = struct(...
                 'id', obj.serials, ...
                 'n_sdrs', obj.n_antennas, ...
@@ -192,8 +203,10 @@ classdef IRIS < Array
             obj.node = iris_py(sdr_params, obj.hub_id);
             
             if obj.is_bs
-                obj.node.sdrsync();                 % Synchronize delays only for BS
-                obj.node.sdr_setupbeacon();   % Burn beacon to the BS RAM
+                obj.node.sdrsync();           % Synchronize delays only for BS
+                if obj.use_tdd
+                    obj.node.sdr_setupbeacon();   % Burn beacon to the BS RAM
+                end
                 obj.node.set_tddconfig(1, obj.sched); % configure the BS: schedule etc.
             else
                 obj.node.sdr_configgainctrl();

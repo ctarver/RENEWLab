@@ -63,9 +63,9 @@ else
     p.ue_array.rx_freq = 3.6e9;
     p.ue_array.tx_gain = 75;
     p.ue_array.rx_gain = 65;
-    p.ue_array.chain_ids = 5;
-    p.ue_array.node_ids = 8;
-    p.ue_array.sched = "GGRR";
+    p.ue_array.chain_ids = 7;
+    p.ue_array.node_ids = 1;
+    p.ue_array.sched = "GGRG";
     p.ue_array.is_bs = false;
 end
 % Only used for simulation arrays.

@@ -38,7 +38,9 @@ else
     p.bs_array.rx_gain = 60;
     p.bs_array.chain_ids = 5:6;
     p.bs_array.node_ids = 1:8;
-    p.bs_array.sched = "BGPG";
+    p.bs_array.sched = "PPPP";
+    p.bs_array.use_tdd = true;
+    p.bs_array.n_frames = 1000;
 end
 if sim_mode
     p.ue_array.name = 'Sim_Array';
@@ -58,8 +60,9 @@ else
     p.ue_array.rx_gain = 60;
     p.ue_array.chain_ids = 7;
     p.ue_array.node_ids = 1;
-    p.ue_array.sched = "GGRG";
+    p.ue_array.sched = [];%"GGRG";
     p.ue_array.is_bs = false;
+    p.ue_array.use_tdd = false;
 end
 % Only used for simulation arrays.
 p.sim_channel.name = 'Quadriga';
