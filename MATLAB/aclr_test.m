@@ -3,7 +3,7 @@ clear;clc;%close all;
 p.n_users = 1;
 p.n_ants = 16;
 
-sim_mode = 1;
+sim_mode = 0;
 
 p.users.distance = 10;
 p.users.theta = 100;
@@ -34,9 +34,9 @@ else
     p.bs_array.wired_ue = false;
     p.bs_array.tx_freq = 3.6e9;
     p.bs_array.rx_freq = 3.6e9;
-    p.bs_array.tx_gain = 75;
+    p.bs_array.tx_gain = 80;
     p.bs_array.rx_gain = 60;
-    p.bs_array.chain_ids = 2:3;
+    p.bs_array.chain_ids = 5:6;
     p.bs_array.node_ids = 1:8;
     p.bs_array.sched = "BGPG";
 end
@@ -59,6 +59,7 @@ else
     p.ue_array.chain_ids = 7;
     p.ue_array.node_ids = 1;
     p.ue_array.sched = "GGRG";
+    p.ue_array.is_bs = false;
 end
 % Only used for simulation arrays.
 p.sim_channel.name = 'Quadriga';

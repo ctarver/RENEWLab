@@ -35,7 +35,7 @@ classdef ACLR_Dataflow < handle
             
             obj.bs = Module.create('bs_array', p);
             obj.ues = Module.create('ue_array', p);
-            obj.simulated_channel = Module.create('sim_channel', p);
+            %obj.simulated_channel = Module.create('sim_channel', p);
             obj.real_channel = Module.create('real_channel', p);
             obj.precoder = Module.create('precoder', p);
             
@@ -51,8 +51,8 @@ classdef ACLR_Dataflow < handle
                 'n_ant', obj.n_ants);
             obj.v1_pre_out = bypass_precoder.use(obj.v0_downlink_data);
             obj.v2_bs_out = obj.bs.tx(obj.v1_pre_out);
-            ue_rx = obj.simulated_channel.use(obj.v2_bs_out); % Only used if array are sim.
-            obj.v3_ue_rx = obj.ues.rx(ue_rx);  % Arg is ignored if real array.
+            %ue_rx = obj.simulated_channel.use(obj.v2_bs_out); % Only used if array are sim.
+            obj.v3_ue_rx = obj.ues.rx(obj.v2_bs_out);  % Arg is ignored if real array.
             
             %% Step 2. Learn Channel.
             % Make pilots.
@@ -60,8 +60,8 @@ classdef ACLR_Dataflow < handle
             for i_ant = 1:obj.n_ants
                 obj.v10_pilot_signals = obj.real_channel.create_pilots(obj.p.mod, i_ant);
                 obj.v12_bs_out = obj.bs.tx(obj.v10_pilot_signals);
-                ue_rx = obj.simulated_channel.use(obj.v12_bs_out); % Only used if array are sim.
-                obj.v13_ue_rx = obj.ues.rx(ue_rx);
+                %ue_rx = obj.simulated_channel.use(obj.v12_bs_out); % Only used if array are sim.
+                obj.v13_ue_rx = obj.ues.rx(obj.v12_bs_out);
                 obj.real_channel.learn(obj.v10_pilot_signals, obj.v13_ue_rx, i_ant);
             end
             % We should probably check the ACLR of each PA using the above.
@@ -70,8 +70,8 @@ classdef ACLR_Dataflow < handle
             obj.precoder.update(obj.real_channel.H);
             obj.v21_pre_out = obj.precoder.use(obj.v0_downlink_data);
             obj.v22_bs_out = obj.bs.tx(obj.v21_pre_out);
-            ue_rx = obj.simulated_channel.use(obj.v22_bs_out); % Only used if array are sim.
-            obj.v23_ue_rx = obj.ues.rx(ue_rx);
+            %ue_rx = obj.simulated_channel.use(obj.v22_bs_out); % Only used if array are sim.
+            obj.v23_ue_rx = obj.ues.rx(obj.v22_bs_out);
             
         end
         

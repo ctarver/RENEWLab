@@ -36,7 +36,7 @@ classdef PA_Dataflow < handle
             
             obj.bs = Module.create('bs_array', p);
             obj.ues = Module.create('ue_array', p);
-            obj.simulated_channel = Module.create('sim_channel', p);
+            %obj.simulated_channel = Module.create('sim_channel', p);
             obj.real_channel = Module.create('real_channel', p);
             obj.precoder = Module.create('precoder', p);
             
@@ -54,8 +54,8 @@ classdef PA_Dataflow < handle
                 'n_ant', obj.n_ants);
             obj.v1_pre_out = bypass_precoder.use(obj.v0_downlink_data);
             obj.v2_bs_out = obj.bs.tx(obj.v1_pre_out);
-            ue_rx = obj.simulated_channel.use(obj.v2_bs_out); % Only used if array are sim.
-            obj.v3_ue_rx = obj.ues.rx(ue_rx);  % Arg is ignored if real array.
+            %ue_rx = obj.simulated_channel.use(obj.v2_bs_out); % Only used if array are sim.
+            obj.v3_ue_rx = obj.ues.rx(obj.v2_bs_out);  % Arg is ignored if real array.
             
             %% Step 2. Learn PAs.
             % Make pilots.
@@ -67,13 +67,13 @@ classdef PA_Dataflow < handle
                 % Make data for all antennas then zero out the ones we
                 % aren't using.
                 this_pa_in_sig = Signal.make_ofdm(obj.n_ants, obj.p.mod);
-                complement = setxor(i_tx, 1:obj.n_ants);
+                complement = setxor(i_ant, 1:obj.n_ants);
                 this_pa_in_sig.data(complement, :, :)  = ...
                     zeros(size(this_pa_in_sig.data(complement, :, :)));
                 
                 bs_out = obj.bs.tx(this_pa_in_sig);
-                ue_rx = obj.simulated_channel.use(bs_out); % Only used if array are sim.
-                this_pa_out = obj.ues.rx(ue_rx); % Hopefully wired...
+%                ue_rx = obj.simulated_channel.use(bs_out); % Only used if array are sim.
+                this_pa_out = obj.ues.rx(bs_out); % Hopefully wired...
                 obj.pas(i_ant).learn(this_pa_in_sig, this_pa_out);
             end
             % We should probably check the ACLR of each PA using the above.

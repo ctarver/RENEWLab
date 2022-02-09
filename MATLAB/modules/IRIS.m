@@ -47,8 +47,8 @@ classdef IRIS < Array
             addParameter(vars, 'is_bs', true, validBool);
             addParameter(vars, 'sched', 'BGPG');
             addParameter(vars, 'n_samp', 4096, validScalarPosNum);
-            addParameter(vars, 'n_frame', 1, validScalarPosNum);
-            addParameter(vars, 'n_zero', 128, validScalarPosNum);
+            addParameter(vars, 'n_frame', 50, validScalarPosNum);
+            addParameter(vars, 'n_zero', 404, validScalarPosNum);
             parse(vars, varargin{:});
             obj.save_inputs_to_obj(vars);
             
@@ -63,21 +63,21 @@ classdef IRIS < Array
         
         function subscribe_rx(obj, ue)
             % This is meant to be to register a ue to the list of ues.
-            n_subcribers = numel(obj.subscrbers);
+            n_subcribers = numel(obj.subscribers);
             obj.subscribers{n_subcribers+1} = {ue};
         end
         
-        function subclass_tx(obj, data)
+        function input_slot = subclass_tx(obj, data)
             obj.prepare_rxs();
             
             % Make data fit the specified n_samples by  prepending and
             % appending zeros.
             n_data_samples = length(data(1,:));
             total_n_zero = obj.n_samp - n_data_samples;
-            fprtinf('Will add %d zeros to slot\n', total_n_zero);
+            fprintf('Will add %d zeros to slot\n', total_n_zero);
             data_start = total_n_zero/2;
             input_slot = zeros(obj.n_antennas, obj.n_samp);
-            input_slot(:, data_start:data_start+n_data_samples) = data;
+            input_slot(:, data_start:data_start+n_data_samples-1) = data;
             
             % Write data
             for i=1:obj.n_antennas
@@ -91,11 +91,12 @@ classdef IRIS < Array
             obj.stop_rxs();
         end
         
-        function out = subclass_rx(obj)
-            if isempty(obj.rx_vec_iris)
-                [obj.rx_vec_iris, data0_len] = node_ue.uesdrrx(obj.n_samp); % read data
-            end
-            out = obj.rx_vec_iris;
+        function out = subclass_rx(obj, in_to_ignore)
+            %if isempty(obj.rx_vec_iris)
+            pause(0.5);
+                [obj.rx_vec_iris, data0_len] = obj.node.uesdrrx(obj.n_samp); % read data
+            %end
+            out = obj.rx_vec_iris.';
         end
         
         function subclass_measure_noise(obj)
@@ -131,9 +132,9 @@ classdef IRIS < Array
         function done_with_tx(obj)
             % This method is meant for UE nodes after the gNB triggers.
             % It is called by the triggering node.
-            [obj.rx_vec_iris, data0_len] = node_ue.uesdrrx(obj.n_samp); % read data
+            %[obj.rx_vec_iris, data0_len] = obj.node.uesdrrx(obj.n_samp); % read data
             if ~obj.wired_ue
-                obj.sdr_unsetcorr();              % activate correlator
+                obj.node.sdr_unsetcorr();              % activate correlator
             end
         end
     end
@@ -143,14 +144,14 @@ classdef IRIS < Array
         function prepare_rxs(obj)
             % Will tell each UE to prepare!
             for i = 1:numel(obj.subscribers)
-                obj.subscribers{i}.prepare_for_tx();
+                obj.subscribers{i}{i}.prepare_for_tx();
             end
         end
         
         function stop_rxs(obj)
             % Will tell each UE to relax
             for i = 1:numel(obj.subscribers)
-                obj.subscribers{i}.done_with_tx();
+                obj.subscribers{i}{i}.done_with_tx();
             end
         end
         
@@ -161,7 +162,8 @@ classdef IRIS < Array
                 "RF3E000146", "RF3E000122", "RF3E000150", "RF3E000128", "RF3E000168", "RF3E000136", "RF3E000213", "RF3E000142"; ...        % Chain 4
                 "RF3E000356", "RF3E000546", "RF3E000620", "RF3E000609", "RF3E000604", "RF3E000612", "RF3E000640", "RF3E000551"; ...        % Chain 5
                 "RF3E000208", "RF3E000636", "RF3E000632", "RF3E000568", "RF3E000558", "RF3E000633", "RF3E000566", "RF3E000635";...           % Chain 6
-                "RF3E000164", ""          , ""          , ""          , ""          ,  ""         , ""          , ""]; %, "RF3D000016"]; %, "RF3E000180"];
+                "RF3D000016", "RF3E000089"          , ""          , ""          , ""          ,  ""         , ""          , ""]; %, "RF3D000016"]; %, "RF3E000180"];
+                 
             obj.serials = chains(obj.chain_ids, obj.node_ids);
             obj.serials = obj.serials(:);
             
@@ -192,6 +194,7 @@ classdef IRIS < Array
             if obj.is_bs
                 obj.node.sdrsync();                 % Synchronize delays only for BS
                 obj.node.sdr_setupbeacon();   % Burn beacon to the BS RAM
+                obj.node.set_tddconfig(1, obj.sched); % configure the BS: schedule etc.
             else
                 obj.node.sdr_configgainctrl();
                 obj.node.sdrrxsetup();
@@ -199,7 +202,9 @@ classdef IRIS < Array
                 if ~obj.wired_ue
                     obj.node.sdr_setcorr();   % activate correlator
                 end
+                obj.node.set_tddconfig(obj.wired_ue, obj.sched); % configure the BS: schedule etc.
                 obj.node.sdr_activate_rx();   % activate reading stream
+                
             end
         end
     end
