@@ -44,11 +44,10 @@ classdef GMP < Module
             y = X * obj.coeffs;
         end
         
-        function learn(obj, x_signal, y_signal)
+        function learn(obj, x, y)
             %learn will set up the GMP matrix and learn the coeffs.
-            x_signal.match_this(obj.required_domain, obj.required_fs);
-            y_signal.match_this(obj.required_domain, obj.required_fs);
-            
+            x = x.';
+            y = y.';
             X = obj.setup_basis_matrix(x);
             obj.coeffs = obj.ls_estimation(X, y);
         end

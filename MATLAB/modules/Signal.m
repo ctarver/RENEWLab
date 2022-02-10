@@ -19,6 +19,7 @@ classdef Signal < handle
         figure_style
         rms_power
         papr
+        debug = 0
     end
     
     methods
@@ -120,7 +121,7 @@ classdef Signal < handle
             
             if nargin == 2
                 align_type = 'first';
-                offset = 0;
+                offset = 1;
             elseif nargin == 3
                 offset = 0;
             end
@@ -147,8 +148,8 @@ classdef Signal < handle
                     obj.data = aligned;
                 case 'first'
                     [out_aligned_and_averaged, location] = obj.align_sample(obj.data, data_ref, false, offset);
-                    % out_synced = obj.align_phase(out_subsample_corrected, data_ref);
-                    obj.data = out_aligned_and_averaged;
+                    out_aligned_and_averaged = obj.align_phase(out_aligned_and_averaged, data_ref);
+                    obj.data = out_aligned_and_averaged.';
                 case 'average'
                     [out_aligned_and_averaged, location]  = obj.align_sample(obj.data, data_ref, true, offset);
                     out_synced = obj.align_phase(out_aligned_and_averaged, data_ref);
@@ -393,6 +394,96 @@ classdef Signal < handle
                 obj.signal_array(i).downsample(desired_fs);
             end
             obj.fs = desired_fs;
+        end
+        
+        function [out, location] = align_sample(obj, align_this, to_this, ...
+                do_averaging, offset)
+            % Uses crosscorrelation to align signals in time domain.
+            % out = align_sample(align_this, to_this, do_averaging)
+            % Inputs:
+            %    - align_this.   Vector of data that we will align to the next input
+            %    - to_this.      Vector of data that we will align to.
+            %    - do_averaging. (Optional; default is false) Bool indicating that we
+            %                    should averagemultiple transmissions.
+            %    - offset        (Optional, default = 0) Int.
+            %                    Offset to use in returning the aligned
+            %                    version of the signal
+            % Outputs:
+            %    - out:          Output vector that is a modified version
+            %                    of align_this
+            % Averaging:
+            %    Averaging is helpful in DPD and SIC learning. The
+            %    do_averaging flag will cause it to average across each
+            %    copy of the signal that was received. It automatically
+            %    throws away the first and last version since they may be
+            %    partial transmissions.
+            
+            % make sure that align_this is a column vector.
+            align_this = reshape(align_this, [], 1);
+            
+            if nargin == 3
+                offset = 0;
+            end
+            
+            %normalize align_this and to_this to 1, such that absolute
+            %thresholding can be used for finding correlation peaks
+            if nnz(to_this) == 0
+                norm_to_this = to_this;
+                norm_align_this = align_this;
+                transmit_data_ratio = 1;
+            else
+                transmit_data_ratio = nnz(to_this)/length(to_this);
+                norm_align_this = align_this/max(align_this);
+                norm_to_this = to_this/max(to_this);
+            end
+            
+            location = nan; % default case.
+            [r, lags] = xcorr(norm_align_this, norm_to_this);
+            peak_threshold = max([0.9*max(abs(r)), 0]); % 1000*transmit_data_ratio]);
+            [~, locs] = findpeaks(abs(r), lags, 'MinPeakHeight', peak_threshold);
+            x = locs >= 0;
+            locs = locs(x);
+            if length(locs) == 1
+                do_averaging = 0;
+            elseif isempty(locs)
+                disp('No alignment peak found. Maybe you have great isolation. Maybe there is a problem...');
+                do_averaging = 0;
+            end
+            
+            if do_averaging
+                n_averages = max(length(locs)-2, 1); % Plan on throwing away the first and last peak.
+                n_averages = min(n_averages, 100);
+                out = zeros(length(to_this), 1);
+                for i = 1:n_averages
+                    out = out + align_this(locs(i+1)+offset:locs(i+1)+length(to_this)-1+offset);
+                end
+                out = out / n_averages;
+                location = locs(2) + offset;
+            else
+                n_averages = 1;
+                try
+                    out = align_this(locs(2)+offset:locs(2)+length(to_this)-1+offset);
+                    location = locs(2) + offset;
+                catch
+                    try
+                        out = align_this(locs(1)+offset:locs(1)+length(to_this)-1+offset);
+                        location = locs(1) + offset;
+                    catch
+                        out = zeros(length(to_this), 1);
+                    end
+                end
+            end
+            if obj.debug
+                fprintf('\tNumber of averages: %d\n', n_averages);
+                fprintf('\tAlignment Peaks: %d\n', locs);
+                figure
+                plot(lags, abs(r));
+                hold on;
+                plot(lags, (abs(r) > peak_threshold)*peak_threshold);
+                xlabel('Sample Index')
+                ylabel('Cross Correlation')
+                title('Sample Alignment')
+            end
         end
     end
     
