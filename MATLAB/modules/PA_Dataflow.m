@@ -53,7 +53,7 @@ classdef PA_Dataflow < handle
                 'required_domain', 'bypass', ...
                 'n_ant', obj.n_ants);
             obj.v1_pre_out = bypass_precoder.use(obj.v0_downlink_data);
-            obj.v2_bs_out = obj.bs.tx(obj.v1_pre_out);
+            obj.v2_bs_out = obj.bs.tx(obj.v1_pre_out);        
             %ue_rx = obj.simulated_channel.use(obj.v2_bs_out); % Only used if array are sim.
             obj.v3_ue_rx = obj.ues.rx(obj.v2_bs_out);  % Arg is ignored if real array.
             
@@ -82,7 +82,7 @@ classdef PA_Dataflow < handle
             obj.precoder.update(obj.real_channel.H);
             obj.v21_pre_out = obj.precoder.use(obj.v0_downlink_data);
             obj.v22_bs_out = obj.bs.tx(obj.v21_pre_out);
-            ue_rx = obj.simulated_channel.use(obj.v22_bs_out); % Only used if array are sim.
+            %ue_rx = obj.simulated_channel.use(obj.v22_bs_out); % Only used if array are sim.
             obj.v23_ue_rx = obj.ues.rx(ue_rx);
             
         end

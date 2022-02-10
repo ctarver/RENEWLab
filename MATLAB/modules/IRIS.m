@@ -47,10 +47,11 @@ classdef IRIS < Array
             addParameter(vars, 'use_hub', true, validBool);
             addParameter(vars, 'is_bs', true, validBool);
             addParameter(vars, 'sched', 'BGPG');
-            addParameter(vars, 'n_samp', 4096, validScalarPosNum);
+            addParameter(vars, 'n_samp', 3288, validScalarPosNum);
             addParameter(vars, 'n_frame', 50, validScalarPosNum);
-            addParameter(vars, 'n_zero', 404, validScalarPosNum);
+            addParameter(vars, 'n_zero', 0, validScalarPosNum);
             addParameter(vars, 'use_tdd', false, validBool);
+            addParameter(vars, 'max_amp', 1, validScalarPosNum);
             parse(vars, varargin{:});
             obj.save_inputs_to_obj(vars);
             
@@ -70,33 +71,51 @@ classdef IRIS < Array
         end
         
         function input_slot = subclass_tx(obj, data)
-            obj.prepare_rxs();
+            %obj.prepare_rxs();
             
-            % Make data fit the specified n_samples by  prepending and
-            % appending zeros.
-            n_data_samples = length(data(1,:));
-            total_n_zero = obj.n_samp - n_data_samples;
-            fprintf('Will add %d zeros to slot\n', total_n_zero);
-            data_start = total_n_zero/2;
-            input_slot = zeros(obj.n_antennas, obj.n_samp);
-            input_slot(:, data_start:data_start+n_data_samples-1) = data;
-            
-            % Write data
-            for i=1:obj.n_antennas
-                obj.node.sdrtx_single(input_slot(i,:), i);  % Burn data to the BS RAM
+            if obj.use_tdd
+                % Make data fit the specified n_samples by  prepending and
+                % appending zeros.
+                n_data_samples = length(data(1,:));
+                total_n_zero = obj.n_samp - n_data_samples;
+                fprintf('Will add %d zeros to slot\n', total_n_zero);
+                data_start = total_n_zero/2;
+                input_slot = zeros(obj.n_antennas, obj.n_samp);
+                input_slot(:, data_start:data_start+n_data_samples-1) = data;
+
+                % Write data
+                for i=1:obj.n_antennas
+                    obj.node.sdrtx_single(input_slot(i,:), i);  % Burn data to the BS RAM
+                end
+
+                % Start
+                obj.node.sdrtrigger();
+            else
+                % Write data
+                input_slot = data;
+                for i=1:obj.n_antennas
+                    obj.node.sdrtx_single(data(i,:), i);  % Burn data to the BS RAM
+                    obj.node.sdrtx_activate_replay_single(length(data(i,:)), i)
+                end                
             end
             
-            % Start
-            obj.node.sdrtrigger();
             
             % Tell UEs we are done.
-            obj.stop_rxs();
+            %obj.stop_rxs();
+        end
+        
+        function stop_tx(obj)
+           obj.node.stop_tx_replay(); 
         end
         
         function out = subclass_rx(obj, in_to_ignore)
             %if isempty(obj.rx_vec_iris)
-            pause(0.5);
+            if obj.use_tdd
+                pause(0.5);
                 [obj.rx_vec_iris, data0_len] = obj.node.uesdrrx(obj.n_samp); % read data
+            else
+                [obj.rx_vec_iris, data0_len] = obj.node.sdrrx_triggen(obj.n_samp, 0); % read data
+            end
             %end
             out = obj.rx_vec_iris.';
         end
@@ -140,9 +159,9 @@ classdef IRIS < Array
             end
         end
         
-        function delete(obj)
-           obj.node.sdr_close(); 
-        end
+        %function delete(obj)
+        %    obj.node.sdr_close();
+        %end
     end
     
     methods (Access=protected)
@@ -169,7 +188,7 @@ classdef IRIS < Array
                 "RF3E000356", "RF3E000546", "RF3E000620", "RF3E000609", "RF3E000604", "RF3E000612", "RF3E000640", "RF3E000551"; ...        % Chain 5
                 "RF3E000208", "RF3E000636", "RF3E000632", "RF3E000568", "RF3E000558", "RF3E000633", "RF3E000566", "RF3E000635";...           % Chain 6
                 "RF3D000016", "RF3E000089"          , ""          , ""          , ""          ,  ""         , ""          , ""]; %, "RF3D000016"]; %, "RF3E000180"];
-                 
+            
             obj.serials = chains(obj.chain_ids, obj.node_ids);
             obj.serials = obj.serials(:);
             
@@ -181,7 +200,7 @@ classdef IRIS < Array
         end
         
         function setup_board(obj)
-            if obj.use_tdd
+            if ~obj.use_tdd
                 obj.sched = [];
             end
             
@@ -203,11 +222,13 @@ classdef IRIS < Array
             obj.node = iris_py(sdr_params, obj.hub_id);
             
             if obj.is_bs
+                obj.node.sdr_configgainctrl();
                 obj.node.sdrsync();           % Synchronize delays only for BS
                 if obj.use_tdd
                     obj.node.sdr_setupbeacon();   % Burn beacon to the BS RAM
+                    obj.node.set_tddconfig(1, obj.sched); % configure the BS: schedule etc.
                 end
-                obj.node.set_tddconfig(1, obj.sched); % configure the BS: schedule etc.
+                obj.node.sdrrxsetup();
             else
                 obj.node.sdr_configgainctrl();
                 obj.node.sdrrxsetup();
@@ -215,8 +236,10 @@ classdef IRIS < Array
                 if ~obj.wired_ue
                     obj.node.sdr_setcorr();   % activate correlator
                 end
-                obj.node.set_tddconfig(obj.wired_ue, obj.sched); % configure the BS: schedule etc.
-                obj.node.sdr_activate_rx();   % activate reading stream
+                if obj.use_tdd
+                    obj.node.set_tddconfig(obj.wired_ue, obj.sched); % configure the BS: schedule etc.
+                end
+                %obj.node.sdr_activate_rx();   % activate reading stream
                 
             end
         end

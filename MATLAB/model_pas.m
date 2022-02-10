@@ -1,5 +1,12 @@
 %% Settings.
 clear;clc;%close all;
+
+[version, executable, isloaded] = pyversion;
+if ~isloaded
+    pyversion /usr/bin/python
+    py.print() %weird bug where py isn't loaded in an external script
+end
+
 p.n_users = 1;
 p.n_ants = 1;
 
@@ -10,18 +17,18 @@ p.users.theta = 100;
 
 p.pa.name = 'GMP';
 p.pa.required_domain = 'time';
-p.pa.required_fs = 7.68e6/2;
+p.pa.required_fs = 7.68e6;
 p.pa.P = 7;
 p.pa.M = 4;
 p.pa.L = 0;
 
 p.mod.name = 'OFDM';
 p.mod.required_domain = 'freq';
-p.mod.required_fs = 7.68e6/2;
+p.mod.required_fs = 7.68e6;
 p.mod.n_users = p.n_users;
-p.mod.n_scs = 100;
-p.mod.fft_size = 512/2;
-p.mod.n_symbols = 6;
+p.mod.n_scs = 180;
+p.mod.fft_size = 512;
+p.mod.n_symbols = 3;
 p.mod.make_cyclic = true;
 p.mod.use_windowing = true;
 p.mod.window_length = 32;
@@ -37,15 +44,18 @@ else
     p.bs_array.n_antennas = p.n_ants;
     p.bs_array.required_fs = p.mod.required_fs;
     p.bs_array.required_domain = 'time';
-    p.bs_array.use_hub = true;
+    p.bs_array.use_hub = false;
     p.bs_array.wired_ue = false;
-    p.bs_array.tx_freq = 3.6e9;
-    p.bs_array.rx_freq = 3.6e9;
-    p.bs_array.tx_gain = 80;
-    p.bs_array.rx_gain = 60;
+    p.bs_array.tx_freq = 3.56e9;
+    p.bs_array.rx_freq = 3.56e9;
+    p.bs_array.tx_gain = 81;
+    p.bs_array.rx_gain = 70;
     p.bs_array.chain_ids = 6;
     p.bs_array.node_ids = 8;
-    p.bs_array.sched = "BGPG";
+    p.bs_array.sched = "PPPP";
+    p.bs_array.use_tdd = false;
+    p.bs_array.n_frame = 10000;
+    p.bs_array.max_amp = 1;
 end
 if sim_mode
     p.ue_array.name = 'Sim_Array';
@@ -57,16 +67,19 @@ else
     p.ue_array.n_antennas = 1;
     p.ue_array.required_fs = p.mod.required_fs;
     p.ue_array.required_domain = 'time';
-    p.ue_array.wired_ue = false;
+    p.ue_array.wired_ue = true;
     p.ue_array.use_hub = false;
-    p.ue_array.tx_freq = 3.6e9;
-    p.ue_array.rx_freq = 3.6e9;
-    p.ue_array.tx_gain = 75;
-    p.ue_array.rx_gain = 65;
-    p.ue_array.chain_ids = 7;
+    p.ue_array.tx_freq = 3.56e9;
+    p.ue_array.rx_freq = 3.56e9;
+    p.ue_array.tx_gain = 81;
+    p.ue_array.rx_gain = 70;
+    p.ue_array.chain_ids = 6;
     p.ue_array.node_ids = 1;
     p.ue_array.sched = "GGRG";
     p.ue_array.is_bs = false;
+    p.ue_array.use_tdd = false;
+    p.ue_array.n_frame = 1;
+    p.ue_array.n_samp = 8000;
 end
 % Only used for simulation arrays.
 p.sim_channel.name = 'Quadriga';

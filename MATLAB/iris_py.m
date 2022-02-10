@@ -311,8 +311,8 @@ classdef iris_py < handle
                 data_raw(ipy, :) = double( py.array.array( 'd',py.numpy.nditer( py.numpy.real(rcv_data) ) ) ) + ...
                     1i*double( py.array.array( 'd',py.numpy.nditer( py.numpy.imag(rcv_data) ) ) );
             end
-            figure; plot(abs(data_raw(1,:)))
-            figure; plot(abs(data_raw(2,:)))
+            %figure; plot(abs(data_raw(1,:)))
+            %figure; plot(abs(data_raw(2,:)))
             data = data_raw.';
             len = length(data);
         end

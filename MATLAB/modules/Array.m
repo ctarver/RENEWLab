@@ -28,6 +28,7 @@ classdef Array < Module
         n_rx_paths
         rx_paths
         tx_paths
+        max_amp
     end
     
     methods (Abstract)
@@ -48,6 +49,7 @@ classdef Array < Module
             % Ensure signals match block requirements
             S = S_in.copy();
             S.match_this(obj.required_domain, obj.required_fs);
+            S.normalize_to_this_amp(obj.max_amp);
             
             % Extract the data to pass into the subclass tx function
             S_matrix = S.data;

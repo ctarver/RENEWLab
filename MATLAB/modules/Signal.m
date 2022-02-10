@@ -87,6 +87,15 @@ classdef Signal < handle
             % TODO.
         end
         
+        
+        function normalize_to_this_amp(obj, desired_amp)
+            current_real_max = max(max(real(obj.data)));
+            current_imag_max = max(max(imag(obj.data)));
+            current_max = max(current_real_max, current_imag_max);
+            
+            obj.data = desired_amp * obj.data / current_max;
+        end        
+        
         function measure_channels(obj, channels)
             n_channels = numel(channels);
             all_rows = zeros(obj.n_streams, n_channels); 
