@@ -207,8 +207,8 @@ for isnr = 1:nsnr
             % Set up the Iris experiment
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % Create two Iris node objects:
-            ue_ids = ["RF3E000635"];
-            bs_ids = ["RF3D000016"];
+            bs_ids = ["RF3E000566"];
+            ue_ids = ["RF3D000016"];
 
             if TDD_SCHED
                 SMPL_RT  = 5e6;
@@ -252,18 +252,18 @@ for isnr = 1:nsnr
                 % RX
                 n_samp = bs_sdr_params.n_samp;
                 node_bs = iris_py(bs_sdr_params,[]);        % initialize BS
-                %node_ue = iris_py(ue_sdr_params,[]);        % initialize UE
+                node_ue = iris_py(ue_sdr_params,[]);        % initialize UE
 
-                %node_ue.sdr_configgainctrl();
+                node_ue.sdr_configgainctrl();
                 node_bs.sdrsync();                           % synchronize delays only for BS
 
-                %node_ue.sdrrxsetup();                        % set up reading stream
+                node_ue.sdrrxsetup();                        % set up reading stream
                 node_bs.sdrrxsetup();
 
-                %for i=1:N_UE
-                %    node_ue.sdrtx_single(tx_vec_iris, i);       % Burn data to the UE RAM (writeRegisters)
-                %    node_ue.sdrtx_activate_replay_single(length(tx_vec_iris), i)           % start transmission: sdrTx.writeSetting("TX_REPLAY", str(len(signal1_ui32)))
-                %end
+                for i=1:N_UE
+                    node_ue.sdrtx_single(tx_vec_iris, i);       % Burn data to the UE RAM (writeRegisters)
+                    node_ue.sdrtx_activate_replay_single(length(tx_vec_iris), i)           % start transmission: sdrTx.writeSetting("TX_REPLAY", str(len(signal1_ui32)))
+                end
 
                 [rx_vec_iris, data0_len] = node_bs.sdrrx_triggen(n_samp * N_BS_NODE, 0);
 

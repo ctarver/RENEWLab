@@ -47,7 +47,7 @@ classdef IRIS < Array
             addParameter(vars, 'use_hub', true, validBool);
             addParameter(vars, 'is_bs', true, validBool);
             addParameter(vars, 'sched', 'BGPG');
-            addParameter(vars, 'n_samp', 3288, validScalarPosNum);
+            addParameter(vars, 'n_samp', 4096, validScalarPosNum);
             addParameter(vars, 'n_frame', 50, validScalarPosNum);
             addParameter(vars, 'n_zero', 0, validScalarPosNum);
             addParameter(vars, 'use_tdd', false, validBool);
