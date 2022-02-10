@@ -75,17 +75,109 @@ classdef Signal < handle
             
         end
         
-        function freq_shift(obj,offset)
-            % TODO.
-        end
-        
-        function powers = calculate_current_rms_dbm(obj)
-            % TODO.
+        function freq_shift(obj, offset)
+            shift = exp(2*pi*1i*offset/obj.fs*(1:length(obj.data)));
+            if(size(shift) == size(obj.data))
+                obj.data = obj.data .* shift;
+            else
+                obj.data = obj.data .* shift.';
+            end
         end
         
         function normalize_to_this_rms(obj, this_rms)
-            % TODO.
+            scale_factor = obj.calculate_scale_factor(this_rms);
+            obj.data = obj.data * scale_factor;
+            obj.calculate_current_rms_dbm();
+            if abs(this_rms-obj.rms_power) > 0.01
+                error('RMS is wrong.');
+            end
         end
+        
+        function calculate_current_rms_dbm(obj)
+            obj.rms_power = 10 * log10(norm(obj.data)^2/50/length(obj.data)) + 30;
+        end
+        
+        function calculate_scale_factor(obj, desired_dbm_power)
+            sqrt(50*length(obj.data)*10^((desired_dbm_power - 30) / 10)) / norm(obj.data);
+        end
+        
+        function location = align_to(obj, S_reference, align_type, offset)
+            %Aligns signal data to S_reference signal. Supports integer
+            %sample alignment and subsample alignment with a few alignment
+            %types:
+            %   'all' - aligns all rx copies to usable correlation
+            %       peak, returns all aligned copies array
+            %   'best' - aligns rx data with highest correlation peak
+            %   'average' - aligns all rx copies to usable correlation
+            %       peaks and averages them to return one vector
+            %   'none' - returns rx signal with no alignment or cropping
+            %
+            % offset: int. Optional, default = 0. alignment offset applied
+            % to the crosscorrelation return value.
+            
+            raw = obj.data;
+            data_ref = S_reference.data;
+            
+            if nargin == 2
+                align_type = 'first';
+                offset = 0;
+            elseif nargin == 3
+                offset = 0;
+            end
+            
+            assert(obj.n_streams==1, 'This align function only supports 1 stream.')
+            
+            location = 0; % Just a default value.
+            switch align_type
+                case 'all'
+                    % Do  normal sync stuff to get subsamp and phase.
+                    out_aligned_and_averaged = obj.align_sample(obj.data, data_ref, false, offset);
+                    
+                    [~, phase_shift] = obj.align_phase(out_aligned_and_averaged, data_ref);
+                    % Now do it but for multiple copies. Use calculations
+                    % from above.
+                    [r, lags] = xcorr(obj.data, data_ref);
+                    peak_threshold = 0.9* max(abs(r));
+                    [~, locs] = findpeaks(abs(r), lags, 'MinPeakHeight', peak_threshold);
+                    aligned = out_up_raw(locs(2):end-1);  % Assumes offset = 0
+                    X = [aligned, [0; aligned(1:end-1)]];
+                    aligned = X*subsamp;
+                    aligned = aligned*phase_shift/norm(phase_shift);
+                    
+                    obj.data = aligned;
+                case 'first'
+                    [out_aligned_and_averaged, location] = obj.align_sample(obj.data, data_ref, false, offset);
+                    % out_synced = obj.align_phase(out_subsample_corrected, data_ref);
+                    obj.data = out_aligned_and_averaged;
+                case 'average'
+                    [out_aligned_and_averaged, location]  = obj.align_sample(obj.data, data_ref, true, offset);
+                    out_synced = obj.align_phase(out_aligned_and_averaged, data_ref);
+                    obj.data = out_synced;
+                case 'none'
+                    obj.data = raw;
+                otherwise
+                    error('Unknown align_type is Signal align.');
+            end
+        end
+        
+        function [out, coeffs] = align_phase(obj, align_this, to_this)
+            %align_phase. Uses a LS fit to rotate x to fit y.
+            % Inputs:
+            %    - align_this. Vector of data that we will rotate
+            %    - to_this.    Vector of data that we will align to.
+            
+            % Make sure both are column vectors
+            align_this = reshape(align_this, [], 1);
+            to_this = reshape(to_this, [], 1);
+            coeffs = obj.perform_ls_estimation(align_this, to_this);
+            out = align_this * coeffs / norm(coeffs);
+        end
+        
+        function beta = perform_ls_estimation(obj, X, y)
+            lambda = 0.001;
+            beta = (X' * X + lambda * eye(size((X' * X)))) \ (X' * y);
+        end
+        
         
         
         function normalize_to_this_amp(obj, desired_amp)
@@ -94,11 +186,11 @@ classdef Signal < handle
             current_max = max(current_real_max, current_imag_max);
             
             obj.data = desired_amp * obj.data / current_max;
-        end        
+        end
         
         function measure_channels(obj, channels)
             n_channels = numel(channels);
-            all_rows = zeros(obj.n_streams, n_channels); 
+            all_rows = zeros(obj.n_streams, n_channels);
             for i = 1:obj.n_streams
                 all_channels = zeros(1, n_channels);
                 for i_channel = -2:2
