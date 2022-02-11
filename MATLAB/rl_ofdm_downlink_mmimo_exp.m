@@ -24,10 +24,10 @@ USE_HUB                 = 1;
 WIRED_UE                 = 0;
 TX_FRQ                  = 3.56e9;    
 RX_FRQ                  = TX_FRQ;
-TX_GN                   = 75;
+TX_GN                   = 81;
 RX_GN                   = 60;
 SMPL_RT                 = 5e6;  
-N_FRM                   = 1;
+N_FRM                   = 10;
 bs_ids = string.empty();
 bs_sched = string.empty();
 
@@ -83,9 +83,9 @@ chain3 = ["RF3E000346", "RF3E000543", "RF3E000594", "RF3E000404", "RF3E000616", 
 chain4 = ["RF3E000146", "RF3E000122", "RF3E000150", "RF3E000128", "RF3E000168", "RF3E000136", "RF3E000213", "RF3E000142"];
 chain5 = ["RF3E000356", "RF3E000546", "RF3E000620", "RF3E000609", "RF3E000604", "RF3E000612", "RF3E000640", "RF3E000551"];
 chain6 = ["RF3E000208", "RF3E000636", "RF3E000632", "RF3E000568", "RF3E000558", "RF3E000633", "RF3E000566", "RF3E000635"];
-bs_ids = [chain2 chain3];
-ue_ids= ["RF3D000016"]; %, "RF3E000180"];
-
+bs_ids = [chain5];
+%ue_ids= ["RF3E000089"];%RF3D000016"]; %, "RF3E000180"];
+ue_ids = ["RF3E000392"];
 %bs_sched = ["PGRG", "RGPG"];  % All BS schedule, Ref Schedule
 % We send downlink pilots in the first phase
 % And downlink data in the second phase
@@ -161,6 +161,9 @@ node_ue = iris_py(ue_sdr_params, []);    % initialize UE
 node_bs.sdrsync();                 % Synchronize delays only for BS
 node_bs.sdr_setupbeacon();   % Burn beacon to the BS RAM
 
+
+
+
 node_ue.sdr_configgainctrl();
 node_ue.sdrrxsetup();
 
@@ -168,31 +171,33 @@ node_ue.sdrrxsetup();
 %% Downlink Pilot Phase
 postfix_len = N_SAMP - data_len - N_ZPAD_PRE;
 node_ue.set_tddconfig(WIRED_UE, ue_sched); % configure the BS: schedule etc.
+overwrite_sched = "GGPG";
 node_bs.set_tddconfig(1, bs_sched); % configure the BS: schedule etc.
+%node_bs.set_tddconfig_single(1, bs_sched, 1);
 for i=1:N_BS_NODE
     tx_pilot_signal = [zeros(1, N_ZPAD_PRE) exp_pilot_tx(i, :) zeros(1, postfix_len)];
     node_bs.sdrtx_single(tx_pilot_signal, i);  % Burn data to the BS RAM
 end
 
 
-max_try = 10;
+max_try = 200;
 good_signal = 0;
-for i=1:max_try
     if ~WIRED_UE
         node_ue.sdr_setcorr();              % activate correlator
     end
-    node_ue.sdr_activate_rx();   % activate reading stream
+    node_ue.sdr_activate_rx();   % activate reading stream    
+for i=1:max_try
     node_bs.sdrtrigger();
     [rx_vec_iris, data0_len] = node_ue.uesdrrx(N_SAMP); % read data
-    if ~WIRED_UE
-        node_ue.sdr_unsetcorr();              % activate correlator
-    end
     amp = mean(abs(rx_vec_iris));
     if sum(amp > 0.002) == N_UE_NODE
         good_signal = 1;
         break;
     end
 end
+    if ~WIRED_UE
+        node_ue.sdr_unsetcorr();              % activate correlator
+    end
 
 if good_signal == 0
     disp('Did not receive good signal during pilot phase!');

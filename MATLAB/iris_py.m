@@ -148,9 +148,9 @@ classdef iris_py < handle
          
          function sdr_setupbeacon(obj)
              % Assume Beacon only from the first Iris board in the BS array
-             for ipy = 1:obj.n_sdrs
-                 obj.py_obj_array{ipy}.burn_beacon();
-             end
+             %for ipy = 1:obj.n_sdrs
+                 obj.py_obj_array{1}.burn_beacon();
+             %end
          end
 
         function sdr_setupbeacon_single(obj)
@@ -167,7 +167,7 @@ classdef iris_py < handle
                     sched  = convertStringsToChars(tdd_sched);
                 end
                 obj.py_obj_array{ipy}.config_sdr_tdd( pyargs('tdd_sched', sched, ...
-                     'is_bs', is_bs, 'prefix_len', obj.n_zpad_samp, 'max_frames', 1));
+                     'is_bs', is_bs, 'prefix_len', obj.n_zpad_samp, 'max_frames', obj.n_frame));
              end
          end
 

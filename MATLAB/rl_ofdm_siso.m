@@ -207,8 +207,8 @@ for isnr = 1:nsnr
             % Set up the Iris experiment
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % Create two Iris node objects:
-            bs_ids = ["RF3E000566"];
-            ue_ids = ["RF3D000016"];
+            bs_ids = ["RF3E000392"]; % RX
+            ue_ids = ["RF3E000566"]; % TX
 
             if TDD_SCHED
                 SMPL_RT  = 5e6;

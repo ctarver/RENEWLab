@@ -19,7 +19,7 @@ classdef Signal < handle
         figure_style
         rms_power
         papr
-        debug = 0
+        debug = 1
     end
     
     methods
@@ -53,6 +53,43 @@ classdef Signal < handle
                 obj.change_fs(fs)
             end
         end
+        function argos_sync(obj, reference)
+           % Course frame estimation.
+           power_threshold = 0.005;
+           indexes_above = obj.data > power_threshold;
+           pattern = zeros(1,100);
+           pattern(end) = 1;  % Find a rising edge
+           pos = strfind(indexes_above, pattern);
+           extract_index = pos(1);
+           extract_length = 3288;
+           extracted_frame = obj.data(extract_index: extract_index+extract_length-1);
+           
+           figure;
+           plot(indexes_above);
+           hold on;
+           plot(abs(obj.data));
+           plot(diff(indexes_above));
+            
+           %angles = obj.data./reference.data;
+           %cf0 = f_cfr_fitz(angles)
+           %cyclosync()
+        end
+        
+        function v = f_cfr_fitz(obj,z,L,N,Fs)
+            %f_cfr_fitz Method for coarse CFO correction and estimation.
+            
+            R=zeros(1,N);
+            
+            for m=1:N,
+                summa=0;
+                for k=m+1:L,
+                    summa=summa+z(k)*conj(z(k-m));
+                end
+                R(m)=1/(L-m)*summa;
+            end
+            
+            v=1/(pi*N*(N+1)/Fs)*sum(atan2(imag(R),real(R)));
+        end        
         
         function ber = calculate_bit_errors(obj, ref_bits)
             if nargin == 1

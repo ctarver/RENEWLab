@@ -55,7 +55,7 @@ classdef ACLR_Dataflow < handle
             obj.v3_ue_rx = obj.ues.rx(obj.v2_bs_out);  % Arg is ignored if real array.
             
             % Is my signal here?
-            obj.v3_ue_rx.align_to(dataflow.v2_bs_out)
+            obj.v3_ue_rx.align_to(obj.v2_bs_out)
             
             
             %% Step 2. Learn Channel.

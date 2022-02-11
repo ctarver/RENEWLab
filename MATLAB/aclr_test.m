@@ -1,7 +1,7 @@
 %% Settings.
 clear;clc;%close all;
 p.n_users = 1;
-p.n_ants = 16;
+p.n_ants = 2;
 
 sim_mode = 0;
 rf_freq = 3.56e9;
@@ -37,11 +37,11 @@ else
     p.bs_array.rx_freq = rf_freq;
     p.bs_array.tx_gain = 80;
     p.bs_array.rx_gain = 60;
-    p.bs_array.chain_ids = 5:6;
-    p.bs_array.node_ids = 1:8;
+    p.bs_array.chain_ids = 5;
+    p.bs_array.node_ids = 1:2;
     p.bs_array.sched = "PPPP";
     p.bs_array.use_tdd = true;
-    p.bs_array.n_frame = 1000;
+    p.bs_array.n_frame = 10000;
     p.bs_array.max_amp = 1;
 end
 if sim_mode
@@ -54,14 +54,14 @@ else
     p.ue_array.n_antennas = 1;
     p.ue_array.required_fs = p.mod.required_fs;
     p.ue_array.required_domain = 'time';
-    p.ue_array.wired_ue = false;
+    p.ue_array.wired_ue = true;
     p.ue_array.use_hub = false;
     p.ue_array.tx_freq = rf_freq;
     p.ue_array.rx_freq = rf_freq;
     p.ue_array.tx_gain = 75;
-    p.ue_array.rx_gain = 70;
-    p.ue_array.chain_ids = 7;
-    p.ue_array.node_ids = 1;
+    p.ue_array.rx_gain = 65;
+    p.ue_array.chain_ids = 5;
+    p.ue_array.node_ids = 8;
     p.ue_array.sched = [];%"GGRG";
     p.ue_array.is_bs = false;
     p.ue_array.use_tdd = false;
