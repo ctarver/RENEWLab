@@ -128,6 +128,10 @@ classdef OFDM < Module
             norm_factor = sqrt(1/obj.n_users)/per_sc_current_energy;
             user_fd_symbols = norm_factor * user_fd_symbols;
             
+            % Override for single tone. Pick a sc and set to 1.
+            %user_fd_symbols = zeros(size(user_fd_symbols));
+            %user_fd_symbols(50, :) = 1;
+            
             % Fill in full FFT.
             full_fd_data = zeros(obj.fft_size, obj.n_symbols, obj.n_users);
             full_fd_data(end-obj.n_scs/2+1:end, :,:) = user_fd_symbols(1:obj.n_scs/2, :, :);

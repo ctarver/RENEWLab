@@ -1,7 +1,8 @@
 %% Settings.
 clear;clc;%close all;
+addpath('modules');
 p.n_users = 1;
-p.n_ants = 2;
+p.n_ants = 6;
 
 sim_mode = 0;
 rf_freq = 3.56e9;
@@ -35,10 +36,10 @@ else
     p.bs_array.wired_ue = false;
     p.bs_array.tx_freq = rf_freq;
     p.bs_array.rx_freq = rf_freq;
-    p.bs_array.tx_gain = 80;
+    p.bs_array.tx_gain = 60;
     p.bs_array.rx_gain = 60;
     p.bs_array.chain_ids = 5;
-    p.bs_array.node_ids = 1:2;
+    p.bs_array.node_ids = 1:6;
     p.bs_array.sched = "PPPP";
     p.bs_array.use_tdd = true;
     p.bs_array.n_frame = 10000;
@@ -59,9 +60,9 @@ else
     p.ue_array.tx_freq = rf_freq;
     p.ue_array.rx_freq = rf_freq;
     p.ue_array.tx_gain = 75;
-    p.ue_array.rx_gain = 65;
-    p.ue_array.chain_ids = 5;
-    p.ue_array.node_ids = 8;
+    p.ue_array.rx_gain = 45;
+    p.ue_array.chain_ids = 7;
+    p.ue_array.node_ids = 4;
     p.ue_array.sched = [];%"GGRG";
     p.ue_array.is_bs = false;
     p.ue_array.use_tdd = false;
@@ -82,7 +83,7 @@ p.real_channel.required_fs = p.mod.required_fs;
 p.real_channel.required_domain = 'freq';
 p.real_channel.n_scs = p.mod.fft_size;
 p.real_channel.n_ants = p.n_ants;
-p.real_channel.one_shot = false;
+p.real_channel.one_shot = true;
 
 % Precoder.
 p.precoder.name = 'MRT';

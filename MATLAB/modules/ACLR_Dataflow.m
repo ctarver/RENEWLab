@@ -16,8 +16,10 @@ classdef ACLR_Dataflow < handle
         v1_pre_out
         v2_bs_out
         v3_ue_rx
+        v3_ue_rx_raw
         
         v10_pilot_signals
+        v11_pre_out
         v12_bs_out
         v13_ue_rx
         
@@ -28,6 +30,11 @@ classdef ACLR_Dataflow < handle
     
     methods
         function obj = ACLR_Dataflow(p)
+            if nargin == 0
+               aclr_test 
+               return;
+            end
+            
             %ACLR_DATAFLOW
             obj.p = p;
             obj.n_users = p.n_users;
@@ -50,12 +57,14 @@ classdef ACLR_Dataflow < handle
                 'required_domain', 'bypass', ...
                 'n_ant', obj.n_ants);
             obj.v1_pre_out = bypass_precoder.use(obj.v0_downlink_data);
+            obj.v1_pre_out.match_this('time');
+            obj.v1_pre_out.normalize_to_this_rms(3);
             obj.v2_bs_out = obj.bs.tx(obj.v1_pre_out);
             %ue_rx = obj.simulated_channel.use(obj.v2_bs_out); % Only used if array are sim.
-            obj.v3_ue_rx = obj.ues.rx(obj.v2_bs_out);  % Arg is ignored if real array.
-            
+            obj.v3_ue_rx_raw = obj.ues.rx(obj.v2_bs_out);  % Arg is ignored if real array.
+            obj.v3_ue_rx = obj.v3_ue_rx_raw.copy()
             % Is my signal here?
-            obj.v3_ue_rx.align_to(obj.v2_bs_out)
+            obj.v3_ue_rx.align_to(obj.v0_downlink_data)
             
             
             %% Step 2. Learn Channel.
@@ -63,16 +72,39 @@ classdef ACLR_Dataflow < handle
             % Run Downlink from each TX to the UEs
             for i_ant = 1:obj.n_ants
                 obj.v10_pilot_signals = obj.real_channel.create_pilots(obj.p.mod, i_ant);
-                obj.v12_bs_out = obj.bs.tx(obj.v10_pilot_signals);
+                
+                if obj.real_channel.one_shot
+                    obj.v11_pre_out = obj.v10_pilot_signals;
+                else
+                    obj.v11_pre_out = bypass_precoder.use(obj.v10_pilot_signals);
+                
+                    % Delete data for other antennas..
+                    complement = setxor(i_ant, 1:obj.n_ants);
+                    obj.v11_pre_out.data(complement, :, :)  = zeros(size(obj.v11_pre_out.data(complement, :, :)));
+                end
+                obj.v11_pre_out.match_this('time');
+                obj.v11_pre_out.normalize_to_this_amp(0.9);
+                obj.v12_bs_out = obj.bs.tx(obj.v11_pre_out);
                 %ue_rx = obj.simulated_channel.use(obj.v12_bs_out); % Only used if array are sim.
-                obj.v13_ue_rx = obj.ues.rx(obj.v12_bs_out);
+                ue_rx_raw = obj.ues.rx(obj.v12_bs_out);
+                obj.v13_ue_rx = ue_rx_raw.copy();
+                obj.v13_ue_rx.align_to(obj.v10_pilot_signals)
                 obj.real_channel.learn(obj.v10_pilot_signals, obj.v13_ue_rx, i_ant);
+                
+                if obj.real_channel.one_shot
+                    break
+                end
             end
             % We should probably check the ACLR of each PA using the above.
             
+            
+            obj.real_channel.normalize();
+            %obj.precoder.P = fftshift(obj.precoder.P, 3);
             %% Step 3. Main Downlink
             obj.precoder.update(obj.real_channel.H);
             obj.v21_pre_out = obj.precoder.use(obj.v0_downlink_data);
+            obj.v21_pre_out.match_this('time');
+            obj.v21_pre_out.normalize_to_this_rms(3);
             obj.v22_bs_out = obj.bs.tx(obj.v21_pre_out);
             %ue_rx = obj.simulated_channel.use(obj.v22_bs_out); % Only used if array are sim.
             obj.v23_ue_rx = obj.ues.rx(obj.v22_bs_out);
@@ -86,7 +118,7 @@ classdef ACLR_Dataflow < handle
         end
         
         function plot(obj)
-            obj.v3_ue_rx.plot_psd();
+            obj.v3_ue_rx_raw.plot_psd();
             obj.v23_ue_rx.plot_psd();
         end
     end

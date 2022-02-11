@@ -5,11 +5,17 @@ classdef Channel < Module
     properties
         H   % Channel matrix
         n_users
-        n_ant
+        n_ants
     end
     
     methods
         function obj = Channel()
+        end
+        
+        function plot(obj)
+            figure(1023);
+            %plot(abs(H(1,1,:)));
+            plot(squeeze(angle(obj.H(1,1,:))));
         end
         
         function ue_rx = use(obj, downlink_Signal_in)

@@ -187,7 +187,7 @@ classdef IRIS < Array
                 "RF3E000146", "RF3E000122", "RF3E000150", "RF3E000128", "RF3E000168", "RF3E000136", "RF3E000213", "RF3E000142"; ...        % Chain 4
                 "RF3E000356", "RF3E000546", "RF3E000620", "RF3E000609", "RF3E000604", "RF3E000612", "RF3E000640", "RF3E000551"; ...        % Chain 5
                 "RF3E000208", "RF3E000636", "RF3E000632", "RF3E000568", "RF3E000558", "RF3E000633", "RF3E000566", "RF3E000635";...           % Chain 6
-                "RF3D000016", "RF3E000089", "RF3E000392"          , ""          , ""          ,  ""         , ""          , ""]; %, "RF3D000016"]; %, "RF3E000180"];
+                "RF3D000016", "RF3E000089", "RF3E000392", "RF3E000241"          , ""          ,  ""         , ""          , ""]; %, "RF3D000016"]; %, "RF3E000180"];
             
             obj.serials = chains(obj.chain_ids, obj.node_ids);
             obj.serials = obj.serials(:);

@@ -53,9 +53,19 @@ classdef RealChannel < Module
             %end
         end
         
-        function learn(obj, pilots, ue_msig_in, i)
+        
+        function normalize(obj)
+           %the_max = max(max(abs(obj.H)));
+           %obj.H = obj.H/the_max;
+        end
+        
+        
+        
+        function learn(obj, pilots_in, ue_msig_in, i)
             %learn. Use the array class passed in to learn the channel.
             % Create a signal.
+            pilots = pilots_in.copy();
+            pilots.match_this('freq');
             ue_msig = ue_msig_in.copy();
             %ue_msig.match_this('time', obj.required_fs);
             
@@ -133,11 +143,17 @@ classdef RealChannel < Module
             % transmitted.
             
             % For each subcarrier, compute
-            this_x = squeeze(pilots.data(i, 1, :)); % Grab pilot for this TX
-            data_scs = abs(this_x)>0;
+            this_x = squeeze(pilots.data(1, :, :)); % Grab pilot for this TX
+            data_scs = abs(this_x(1,:))>0;
             %this_x = this_x.';
-            this_h = Y(data_scs)./this_x(data_scs);
-            obj.H(1, i, data_scs) = this_h;
+            this_h = Y(:,data_scs)./this_x(:,data_scs);
+            figure(22); 
+            plot(angle(fftshift(this_h.')));  grid on;
+            change_in_phase = mean(angle(this_h(6,:)) - angle(this_h(1,:)));
+            change_in_time = (6*548)/7.68e6; 
+            radians_per_sec = change_in_phase / change_in_time;
+            cfo = radians_per_sec / (2*pi)
+            obj.H(1, i, data_scs) = mean(this_h);
         end
         
         function S = make_single_pilot_symbol(obj, ofdm_settings, i_tx)
@@ -150,13 +166,13 @@ classdef RealChannel < Module
             
             % We will create 1 symbol per TX. They will not overlap in
             % time.
-            ofdm_settings.n_users = obj.n_ants;
-            ofdm_settings.n_symbols = 1;
+            ofdm_settings.n_users = 1;
+            ofdm_settings.n_symbols = 6;
             ofdm_settings.n_scs = ofdm_settings.fft_size;
-            S = Signal.make_ofdm(obj.n_ants, ofdm_settings);
+            S = Signal.make_ofdm(1, ofdm_settings);
             % Delete data for other antennas..
-            complement = setxor(i_tx, 1:obj.n_ants);
-            S.data(complement, :, :)  = zeros(size(S.data(complement, :, :)));
+            %complement = setxor(i_tx, 1:obj.n_ants);
+            %S.data(complement, :, :)  = zeros(size(S.data(complement, :, :)));
             obj.p_sig = S;
         end
         

@@ -42,6 +42,7 @@ classdef MRT < Precoder
             for i_subcarrier = 1:n_scs
                 H_subcarrier = H(:, :, i_subcarrier);
                 obj.P(:,:, i_subcarrier) = H_subcarrier';
+                obj.P(:,:, i_subcarrier) = exp(angle(H_subcarrier') * 1i);
             end
         end
         

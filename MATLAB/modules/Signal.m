@@ -19,7 +19,7 @@ classdef Signal < handle
         figure_style
         rms_power
         papr
-        debug = 1
+        debug = 0
     end
     
     methods
@@ -75,14 +75,18 @@ classdef Signal < handle
            %cyclosync()
         end
         
-        function v = f_cfr_fitz(obj,z,L,N,Fs)
+        function v = f_cfr_fitz(obj,z)
             %f_cfr_fitz Method for coarse CFO correction and estimation.
+            
+            L = length(z);
+            N = floor(L/2);
+            Fs = obj.fs;
             
             R=zeros(1,N);
             
-            for m=1:N,
+            for m=1:N
                 summa=0;
-                for k=m+1:L,
+                for k=m+1:L
                     summa=summa+z(k)*conj(z(k-m));
                 end
                 R(m)=1/(L-m)*summa;
@@ -92,6 +96,7 @@ classdef Signal < handle
         end        
         
         function ber = calculate_bit_errors(obj, ref_bits)
+            obj.match_this('freq');
             if nargin == 1
                 ref_bits = obj.modulator.user_bits;
             end
@@ -131,15 +136,21 @@ classdef Signal < handle
             end
         end
         
-        function calculate_current_rms_dbm(obj)
-            obj.rms_power = 10 * log10(norm(obj.data)^2/50/length(obj.data)) + 30;
+        function calculate_current_rms_dbm(obj, index)
+            if nargin == 1
+                index = 1;
+            end
+            obj.rms_power = 10 * log10(norm(obj.data(index, :))^2/50/length(obj.data(index, :))) + 30;
         end
         
-        function calculate_scale_factor(obj, desired_dbm_power)
-            sqrt(50*length(obj.data)*10^((desired_dbm_power - 30) / 10)) / norm(obj.data);
+        function scale_factor = calculate_scale_factor(obj, desired_dbm_power, index)
+            if nargin == 2
+                index = 1;
+            end 
+            scale_factor = sqrt(50*length(obj.data(index,:))*10^((desired_dbm_power - 30) / 10)) / norm(obj.data(index,:));
         end
         
-        function location = align_to(obj, S_reference, align_type, offset)
+        function location = align_to(obj, S_reference_in, align_type, offset)
             %Aligns signal data to S_reference signal. Supports integer
             %sample alignment and subsample alignment with a few alignment
             %types:
@@ -153,8 +164,11 @@ classdef Signal < handle
             % offset: int. Optional, default = 0. alignment offset applied
             % to the crosscorrelation return value.
             
+            S_reference = S_reference_in.copy();
+            S_reference.match_this('time');
+            
             raw = obj.data;
-            data_ref = S_reference.data;
+            data_ref = S_reference.data(1, :);  % Need only 1 user!
             
             if nargin == 2
                 align_type = 'first';
@@ -459,7 +473,7 @@ classdef Signal < handle
             align_this = reshape(align_this, [], 1);
             
             if nargin == 3
-                offset = 0;
+                offset = 1;
             end
             
             %normalize align_this and to_this to 1, such that absolute
