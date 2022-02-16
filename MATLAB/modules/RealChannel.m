@@ -55,8 +55,8 @@ classdef RealChannel < Module
         
         
         function normalize(obj)
-           %the_max = max(max(abs(obj.H)));
-           %obj.H = obj.H/the_max;
+            %the_max = max(max(abs(obj.H)));
+            %obj.H = obj.H/the_max;
         end
         
         
@@ -147,10 +147,10 @@ classdef RealChannel < Module
             data_scs = abs(this_x(1,:))>0;
             %this_x = this_x.';
             this_h = Y(:,data_scs)./this_x(:,data_scs);
-            figure(22); 
+            figure(22);
             plot(angle(fftshift(this_h.')));  grid on;
             change_in_phase = mean(angle(this_h(6,:)) - angle(this_h(1,:)));
-            change_in_time = (6*548)/7.68e6; 
+            change_in_time = (6*548)/7.68e6;
             radians_per_sec = change_in_phase / change_in_time;
             cfo = radians_per_sec / (2*pi)
             obj.H(1, i, data_scs) = mean(this_h);
@@ -191,7 +191,7 @@ classdef RealChannel < Module
             Y = ue_msig.data;
             
             % Rearange into grid.
-            Y = squeeze(Y(1,:,:));
+            Y = squeeze(Y(1,:,:));  % ASSUMING 1 USER. TODO
             Y = Y.'; % Subcarriers should be columns
             
             [n_subcarriers, n_symbols] = size(Y);
@@ -199,14 +199,25 @@ classdef RealChannel < Module
             obj.H = zeros(1, obj.n_ants, obj.n_scs); % 1st index is user.
             % For each symbols compare to perfect pilot that we
             % transmitted.
-            this_x = squeeze(pilots.data(1,1,:));
-            data_scs = abs(this_x)>0;
             for i = 1:n_symbols
-                % For each subcarrier, compute
-                this_x = squeeze(pilots.data(i,i,:));
-                this_h = Y(data_scs, i)./this_x(data_scs);
-                obj.H(1,i,data_scs) = this_h;
+                for i_ant = 1:obj.n_ants
+                    this_x = squeeze(pilots.data(i_ant, i, :));
+                    data_scs = abs(this_x)>0.00001;
+                    % For each subcarrier, compute
+                    this_x = squeeze(pilots.data(i_ant, i, :));
+                    this_h = Y(data_scs, i_ant)./this_x(data_scs);
+                    data_ind = find(data_scs==1);
+                    
+                    % Interpolate
+                    full_h = interp1(data_ind, angle(this_h),1:obj.n_scs,'linear','extrap');
+                    
+                    
+                    obj.H(1, i_ant, :) =  exp((full_h') * 1i);
+                end
             end
+            
+            % Interpolate.
+            
         end
         
         function S = make_one_shot_pilot(obj, ofdm_settings)
@@ -216,14 +227,20 @@ classdef RealChannel < Module
             % We will create 1 symbol per TX. They will not overlap in
             % time.
             ofdm_settings.n_users = obj.n_ants;
-            ofdm_settings.n_symbols = obj.n_ants;
+            ofdm_settings.n_scs = ofdm_settings.fft_size;
             S = Signal.make_ofdm(obj.n_ants, ofdm_settings);
-            % Delete data so ortho in time.
-            for i_tx = 1:obj.n_ants
-                % The pilots can be anything as long as we keep track of
-                % them. We will just do a QPSK on each subcarrier
-                complement = setxor(i_tx, 1:obj.n_ants);
-                S.data(i_tx, complement, :)  = zeros(size(S.data(i_tx, complement, :)));
+            
+            % Delete data so ortho in frequency.
+            % Loop over the subcarriers.
+            for i_sc = 1:ofdm_settings.fft_size
+                active_antenna = mod(i_sc, obj.n_ants)+1;
+                for i_tx = 1:obj.n_ants
+                    if i_tx == active_antenna
+                        % Do Nothing
+                    else
+                        S.data(i_tx, :, i_sc)  = zeros(size(S.data(i_tx, :, i_sc) ));
+                    end
+                end
             end
             
             obj.p_sig = S;

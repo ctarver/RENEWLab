@@ -27,7 +27,7 @@ classdef Quadriga < Channel
             addParameter(vars, 'required_fs', 122.88e6, validScalarPosNum);
             addParameter(vars, 'index', 1, validScalarPosNum);
             addParameter(vars, 'n_users', 1, validScalarPosNum);
-            addParameter(vars, 'n_ant', 16, validScalarPosNum);
+            addParameter(vars, 'n_ants', 16, validScalarPosNum);
             addParameter(vars, 'f_c', 3.5e9, validScalarPosNum);
             addParameter(vars, 'fft_size', 4096, validScalarPosNum);
             addParameter(vars, 'sc_spacing', 15e3, validScalarPosNum);
@@ -57,7 +57,7 @@ classdef Quadriga < Channel
             [n_antennas, n_symbols, larger_fft] = size(X1);
             %[n_users, ~, ~] = size(X2);
             
-            assert(n_antennas==obj.n_ant, 'Downlink data isnt correct dimensions for channel');
+            assert(n_antennas==obj.n_ants, 'Downlink data isnt correct dimensions for channel');
             %assert(n_users==obj.n_users, 'Uplink data isnt correct dimensions for channel');
             
             Y_down = zeros(obj.n_users, n_symbols, larger_fft);
@@ -100,7 +100,7 @@ classdef Quadriga < Channel
         function build_layout(obj, s, a)
             ant_height = 1.5;
             lambda = physconst('LightSpeed')/obj.f_c;
-            length_of_array = obj.n_ant * 0.5 * lambda;
+            length_of_array = obj.n_ants * 0.5 * lambda;
             obj.layout = qd_layout();
             obj.layout.simpar = s;
             obj.layout.tx_array = a;
@@ -127,7 +127,7 @@ classdef Quadriga < Channel
         
         function a = build_array(obj)
             n_verticle_elements = 1;
-            n_horizontal_elements = obj.n_ant;
+            n_horizontal_elements = obj.n_ants;
             a = qd_arrayant('3gpp-3d', n_verticle_elements, n_horizontal_elements,...
                 obj.f_c, 1, 0.5);
         end
@@ -144,14 +144,14 @@ classdef Quadriga < Channel
             % This is in RX Antenna, TX Antenna, Subcarrier, Time index;
             dummy = channel(1).fr(f_up,  obj.fft_size);
             [~,~,~, n_time_indexes] = size(dummy);
-            H_all = zeros(obj.n_users, 1, obj.n_ant,  obj.fft_size, n_time_indexes);
+            H_all = zeros(obj.n_users, 1, obj.n_ants,  obj.fft_size, n_time_indexes);
             for i_user = 1:obj.n_users
                 H_all(i_user, :,:,:,:) = channel(i_user).fr(f_up,  obj.fft_size);
             end
             
             % Reorganize the channel. Pick 1 time index
             % obj.n_ue_antennas, obj.n_enb_antennas
-            obj.H = zeros(obj.n_users, obj.n_ant,  obj.fft_size);
+            obj.H = zeros(obj.n_users, obj.n_ants,  obj.fft_size);
             
             for i_user = 1:obj.n_users
                 obj.H(i_user,:, :) = H_all(i_user, 1, :, :, 1);
