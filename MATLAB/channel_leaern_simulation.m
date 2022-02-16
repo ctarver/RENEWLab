@@ -2,7 +2,7 @@
 clear;clc;%close all;
 addpath('modules');
 p.n_users = 1;
-p.n_ants = 6;
+p.n_ants = 16;
 
 sim_mode = 1;
 rf_freq = 3.56e9;

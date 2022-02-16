@@ -205,7 +205,7 @@ classdef RealChannel < Module
                     data_scs = abs(this_x)>0.00001;
                     % For each subcarrier, compute
                     this_x = squeeze(pilots.data(i_ant, i, :));
-                    this_h = Y(data_scs, i_ant)./this_x(data_scs);
+                    this_h = Y(data_scs, i)./this_x(data_scs);
                     data_ind = find(data_scs==1);
                     
                     % Interpolate
